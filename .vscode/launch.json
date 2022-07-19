@@ -8,14 +8,19 @@
             "type": "aws-sam",
             "request": "direct-invoke",
             "name": "ToiletDB:DbInterfaceFunction",
+            
             "invokeTarget": {
                 "target": "template",
                 "templatePath": "template.yaml",
                 "logicalId": "DbInterfaceFunction"
             },
             "lambda": {
-                "payload": {},
-                "environmentVariables": {}
+                "payload": {
+                  "path": "/Users/john/work/project/aws/toiletdb/events/event.json"
+                },
+                "environmentVariables": {
+
+                }
             }
         }
     ]
