@@ -1,8 +1,9 @@
 import json
-from xmlrpc.client import Boolean
+from logging import PlaceHolder
+from unittest import result
 import boto3
 import DBconstants
-
+import os
 
 # import requests
 
@@ -17,9 +18,20 @@ class tApi(object):
         super(tApi, self).__init__(*args)
         ###### DB settings ######
         self._client=boto3.resource('dynamodb')
-        self.targetDB=self._client.table["toilet_infomation"]
+        self.targetDB=self._client.Table("toilet_infomation")
         
-    def adminchecknput(self, dict):
+        
+        
+        
+        
+    def post(self, payload):
+        ############ 
+        
+        
+        
+        return status, messages
+    
+    def dataset_validation(self, payload):
         '''
         python dict으로 변환된 입력값
         ### 무결성검사 -> 입력값에 대한 데이터 Type 검증
@@ -31,42 +43,55 @@ class tApi(object):
         
         
         ### Github 배포를 위한 encapsulation
+        payload_holder = payload.deepcopy()
+        
         ko_KR       = DBconstants.ko_KR
+        inv_ko_KR = {v: k for k, v in ko_KR.items()}
         type_check  = DBconstants.type_check 
-        empty_check = DBconstants.empty_check
+        place_holder = DBconstants.empty_check
 
         
         ######## EPSG:3857
         ######## 검증 프로토콜 : type check , mapping check ##########
-        null_input=[] ### 입력받지 않은 케이스들은 여기에 둔다.
-        error_input=[] ### type 이 다른 케이스는 여기에 둔다.
-        anomaly_input=[] ### 입력값에 해당되지 않는 경우는 여기에 둔다.
+        null_input      =   {} ### 입력받지 않은 케이스들은 여기에 둔다.
+        error_input     =   {} ### type 이 다른 케이스는 여기에 둔다.
+        anomaly_input   =   {} ### 입력값에 해당되지 않는 경우는 여기에 둔다.
+        done            =   {} ### 입력완료는 여기에 둔다.
         ######## 타입이 다른 경우를 제외하고 입력하기 ###########
         
-        for i in dict.keys:
+        for i in payload.items:
             if i not in self.type_check:           #### 예외 케이스 1. 해당되지 않은 것을 입력받았을 떄
-                anomaly_input.append[{i:dict[i]}]
-                del dict[i]
-            else:
-                if type(dict[i])!=type_check[i]:
-                    error_input.append[{i:dict[i]}] #### 예외 케이스 2. 타입이 다른 것을 입력 받았을 때,
-                    del dict[i]
-                else: 
-                    ### 입력받지 않은 부분들에 대해서,
-                    print("TODO")
-                        
-        
+                anomaly_input.add(i)
+                del payload[i]
+            elif type(payload[i])!=type_check[i]:
+                error_input.add(i)                 #### 예외 케이스 2. 타입이 다른 것을 입력 받았을 때,
+                del payload[i]
+            else: 
+                done.add(i)                        #### 필터링 완료
+                del payload[i]
+                                                   #### 입력받지 않은 부분들에 대해서,
+        null_input=set(place_holder.keys)-done     #### 예외 케이스 3. Null 값 처리여부    
         
         ### TODO
         ### DB 호출 
         ### 추후에 DB 유저별 권한분리 필요 
         
-        targetDB=self._client.table["toilet_infomation"].putitem(dict)
-        message=f'111111'
-        status = 200
+
         
-        # "empty_dict"
-        return status,message, 
+        if done is None:
+            status = 400
+        else:
+            status = 200
+        
+        result={
+            "done"          : done,
+            "type_error"    : error_input,
+            "anomaly_error" : anomaly_input,
+            "null_error"    : null_input,
+        }
+        
+        message=f'입력 완료 : {1}, 입력 실패 : {2}'
+        return status,result,message
         
 
 
@@ -79,30 +104,24 @@ def respond(err, res=None):
         },
     }
 
-
 def lambda_handler(event, context):
-    """Sample pure Lambda function
-
-    Parameters
-    ----------
-    event: dict, required
-        API Gateway Lambda Proxy Input Format
-
-        Event doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
-
-    context: object, required
-        Lambda Context runtime methods and attributes
-
-        Context doc: https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html
-
-    Returns
-    ------
-    API Gateway Lambda Proxy Output Format: dict
-
-        Return doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
-    """
+    
+    
     c=tApi()
-    c.targetDB
+    print("##############")
+    print("##############")
+    print("##############")
+    print("##############")
+    print("##############")
+    
+    print(type(context))
+    
+    print("##############")
+    print("##############")
+    print("##############")
+    print("##############")
+    print("##############")
+    
     
     operation = event['httpMethod']
     operations = {
@@ -111,21 +130,20 @@ def lambda_handler(event, context):
         'PUT':  2,
     }
     
-    
     print("Received event: " + json.dumps(event, indent=2))
     
     if operation in operations:
         payload = event['queryStringParameters'] if operation == 'GET' else json.loads(event['body']) ### 유의미한 데이터 받아오기
-        if operations[operation] == 0:            ### GET
+        if operations[operation] == 0:                    ### GET
             res= c.targetDB.scan(payload),        
-        elif operations[operation] == 1:          ### POST
-            res= c.targetDB.scan(payload),
+        elif operations[operation] == 1:                  ### POST
+            res= c.targetDB.postItem(payload),
         else:
-            status,message=c.adminchecknput(payload)         ### PUT
+            status,message=c.data_validation(payload)          ### PUT
             if status == 400:
-                respond(ValueError('Unsupported method "{} : {}"'.format(operation,message)),)
+                respond(ValueError('Parameter fail " : {}"'.format(message)),)
             else:
-                res= message
+                res= c.targetDB.putItem(payload)
         return respond(None, res)
     else:
         return respond(ValueError('Unsupported method "{}"'.format(operation)))

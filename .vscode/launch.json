@@ -7,11 +7,11 @@
         {
             "type": "aws-sam",
             "request": "direct-invoke",
-            "name": "my-example:HelloWorldFunction",
+            "name": "ToiletDB:DbInterfaceFunction",
             "invokeTarget": {
                 "target": "template",
                 "templatePath": "template.yaml",
-                "logicalId": "HelloWorldFunction"
+                "logicalId": "DbInterfaceFunction"
             },
             "lambda": {
                 "payload": {},
