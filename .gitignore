@@ -4,8 +4,7 @@
 
 ### custom ###
 
-db_interface/key.json
-db_interface/DBConstants.py
+common_src/src/
 
 
 ### Linux ###
