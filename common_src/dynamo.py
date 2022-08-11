@@ -1,20 +1,18 @@
-import logging
+import os
+import sys
+sys.path.append(os.getcwd())
 
-from typing import List
+import logging
 import datetime
 import time
 import boto3
 import pandas as pd
 import dynamodbgeo
-import os
+
 import base64
-from src import constant
-import apis
-
-
+from common_src.src import constant
+from common_src import apis
 import time
-
-
 
 
 
@@ -80,6 +78,9 @@ class dynamoApi(object):
     
                 
     def dynamoDB_tableInit(self):
+        '''
+        내부 실험용 (Docker용)
+        '''
         self.resource.create_table(
                 TableName='build_info',
                 AttributeDefinitions=[
@@ -286,45 +287,25 @@ class dynamoApi(object):
             logging.info("[System] : 입력된 아이템은 dict 입니다.")
             status, results, message = self.data_validation(item)
             e=self.targetDB.put_item(item=results["done"])
-            return status, results, message   
-    def geodynamodb(self,target):
+            return status, results, message
+    
+    def geodynamodb(self,target,HASHKEY=6):
         config = dynamodbgeo.GeoDataManagerConfiguration(self.client, target)
-        config.hashKeyLength = 10 
+        config.hashKeyLength = HASHKEY 
         geoDataManager = dynamodbgeo.GeoDataManager(config)
         table_util = dynamodbgeo.GeoTableUtil(config)
         create_table_input=table_util.getCreateTableRequest()
         create_table_input["ProvisionedThroughput"]['ReadCapacityUnits']=5
         table_util.create_table(create_table_input)
         return geoDataManager
-    
-    def base64_body_parser(event):
-        body = event["body"]
-        info=[]
-        keys=[]
-        values=[]
-        if event['isBase64Encoded'] == True:
-            n = 4-len(body)%4
-            body=f"{body}{n*'='}"
-            body=base64.b64decode(body)
-            case=body.decode().split('\n')
-        else:
-            case=body.decode().split('\n')
-        for i,j in enumerate(case):
-            print(i,":",j)
-            if 'Content-Disposition:' in j:
-                keys.append(j.split("name=")[1].split("\r")[0].replace('"',''))
-                values.append(case[i+2].split('\r')[0])
-            elif '-' in j:
-                j=j.replace("-","").split("\r")[0]
-                info.append(j)
-        
-        payload={k:v for k,v in zip(keys,values)}
-        info = list(set(info))[0]
-        return payload,info
-    
 
-    def single_input(s,geoDataManager):
+    def single_input(self,s,geoDataManager):
     ##
+    
+        '''
+        단일 입력값 넣기    
+        
+        '''
         _s=s
         item_dict={}
         err_0=False
@@ -337,7 +318,6 @@ class dynamoApi(object):
             res_geo,status=apis.vworld_address(_s['platPlc'],road=False)
             if status=='status : no':
                 err_1=True
-
                 res_geo['lng']=None
                 res_geo['lat']=None
                 res_geo['crs']=None
@@ -351,62 +331,10 @@ class dynamoApi(object):
         localcode=str(_s['sigunguCd']+_s['bjdongCd'])
         item_dict['LOCALCODE']={'S':localcode}
         
-        if s["bldNm"] is not None:
-            item_dict["bldNm"]={'S':_s['bldNm']}
-        if s['splotNm'] is not None:
-            item_dict['splotNm']={'S':_s['splotNm']}
-        if s['dongNm'] is not None:
-            item_dict['dongNm']={'S':_s['dongNm']}
-        if s['crtnDay'] is not None:
-            item_dict['crtnDay']={'S':_s['crtnDay']}
-        if s['platPlc'] is not None:
-            item_dict['platPlc']={'S':_s['platPlc']}
-        if s['rnum'] is not None:
-            item_dict['rnum']={'S':_s['rnum']}
-        if s['sigunguCd'] is not None:
-            item_dict['sigunguCd']={'S':_s['sigunguCd']}
-        if s['bjdongCd'] is not None:
-            item_dict['bjdongCd']={'S':_s['bjdongCd']}
-        if s['platGbCd'] is not None:
-            item_dict['platGbCd']={'S':_s['platGbCd']}
-        if s['bun'] is not None:
-            item_dict['bun']={'S':_s['bun']}
-        if s['ji'] is not None:
-            item_dict['ji']={'S':_s['ji']}
-        if s['newPlatPlc'] is not None:
-            item_dict['newPlatPlc']={'S':_s['newPlatPlc']}
-        if s['naRoadCd'] is not None:
-            item_dict['naRoadCd']={'S':_s['naRoadCd']}
-        if s['naBjdongCd'] is not None:
-            item_dict['naBjdongCd']={'S':_s['naBjdongCd']}
-        if s['naMainBun'] is not None:
-            item_dict['naMainBun']={'S':_s['naMainBun']}
-        if s['naSubBun'] is not None:
-            item_dict['naSubBun']={'S':_s['naSubBun']}
-        if s['naUgrndCd'] is not None:
-            item_dict['naUgrndCd']={'S':_s['naUgrndCd']}
-        if s['block'] is not None:
-            item_dict['block']={'S':_s['block']}
-        if s['lot'] is not None:
-            item_dict['lot']={'S':_s['lot']}
-        if s['mainAtchGbCd'] is not None:
-            item_dict['mainAtchGbCd']={'S':_s['mainAtchGbCd']}
-        if s['mainAtchGbCdNm'] is not None:
-            item_dict['mainAtchGbCdNm']={'S':_s['mainAtchGbCdNm']}
-        if s['heit'] is not None:
-            item_dict['heit']={'S':_s['heit']}
-        if s['lot'] is not None:
-            item_dict['lot']={'S':_s['lot']}
-        if s['mainAtchGbCd'] is not None:
-            item_dict['mainAtchGbCd']={'S':_s['mainAtchGbCd']}
-        if s['mainAtchGbCdNm'] is not None:
-            item_dict['mainAtchGbCdNm']={'S':_s['mainAtchGbCdNm']}
-        if s['grndFlrCnt'] is not None:
-            item_dict['grndFlrCnt']={'S':_s['grndFlrCnt']}
-        if s['grndFlrCnt'] is not None:
-            item_dict['ugrndFlrCnt']={'S':_s['ugrndFlrCnt']}
-
-
+        target=constant.columns_target_dict
+        for i in target.keys():
+            if _s[i] is not None:
+                item_dict[i]={'S':_s[i]}
             
         if res_geo['crs'] is not None:
             item_dict['CRS']={'S':res_geo['crs']}
@@ -422,7 +350,7 @@ class dynamoApi(object):
 
         }
         try:
-            geoDataManager.put_Point(
+            info=geoDataManager.put_Point(
             dynamodbgeo.PutPointInput(
                 dynamodbgeo.GeoPoint(float(res_geo['lat']), float(res_geo['lng'])), # latitude then latitude longitude
                 str(_s['mgmBldrgstPk']),
@@ -446,6 +374,55 @@ class dynamoApi(object):
         return result
 
 
+        
+    def abnormal_table_init(self,target):
+        if target in self.client.list_tables()['TableNames']:
+            info="done"
+            logging.warn(f"Table [{target}] already exists. Skipping table creation.")
+        else:
+            info=self.client.create_table(
+                        TableName=target,
+                        AttributeDefinitions=[ 
+                            {'AttributeName': 'PK','AttributeType': 'S'},
+                            {'AttributeName': 'LOCALCODE','AttributeType': 'S'},
+                        ],
+                        KeySchema=[
+                            {'AttributeName': 'PK','KeyType': 'HASH'},
+                            {'AttributeName': 'LOCALCODE','KeyType': 'RANGE'},
+                        ],
+                        TableClass='STANDARD',
+                        ProvisionedThroughput={
+                                                'ReadCapacityUnits': 2000,
+                                                'WriteCapacityUnits': 2000,
+                                            }
+                    )
+        return info
+    
+    def radius_query(self,Lat,Lng,radius,Table=None,Index=None):
+        
+        
+        if Index==None:
+            if Table==None:
+                geoDataManager=self.geodynamodb(self.client,self._table_name)
+            else:
+                geoDataManager=self.geodynamodb(self.client,Table)
+        else:
+            if Table==None:
+                geoDataManager=self.geodynamodb(self.client,self._table_name,Index)
+            else:
+                geoDataManager=self.geodynamodb(self.client,Table,Index)
+        start_time = time.time()
+    
+        query_reduis_result=geoDataManager.queryRadius(
+        dynamodbgeo.QueryRadiusRequest(
+            dynamodbgeo.GeoPoint(Lat, Lng), # center point
+            radius,  sort = True)) # diameter
+
+        logging.info(f"Qtime:{time.time()-start_time}")
+        return query_reduis_result
+
+
+
 if __name__ =="__main__":
     print("dynamo uni test")
     
@@ -458,6 +435,11 @@ if __name__ =="__main__":
     aws_secret_access_key       = os.environ['AWSSECRETKEY']
     
     logging.info(f"env:{aws_env},{dev_env},")
+    
+    '''
+    UNIT TEST index 별 속도 차이 테스트
+    '''
+    
     
     cli = boto3.client(
         'dynamodb', 
@@ -474,7 +456,7 @@ if __name__ =="__main__":
         IndexName="geohash-index",
         Limit=1000
     )
-    # print(r)
+    
     print(f"Full indexing : Time {time.time()-st}")
     st=time.time()
     r=conn.client.scan(
@@ -483,10 +465,15 @@ if __name__ =="__main__":
         Limit=1000
     )
     
-    # print(r)
     print(f"Short indexing : Time {time.time()-st}")
     
     
+    # default_cord={
+    #     'lat':,
+    #     'lng':,
+    # }
+    
+    # conn.
     
     
     

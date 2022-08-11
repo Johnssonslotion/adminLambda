@@ -22,7 +22,7 @@ def vworld_address(address,road=True):
       "service" : "address",
       "version" : "2.0",
       "request" : "GetCoord",
-      "key"     : os.environ["vworldKey"],
+      "key"     : os.environ["VWORLDKEY"],
       "format"  : "json",
       "crs"     : "epsg:4326",
       "type"    : type_str,
@@ -50,7 +50,7 @@ def vworld_address(address,road=True):
 
 def call_api(urls,locate_code_1,locate_code_2,startDate=None,endDate=None,num=100,pageNo=1):
   params ={
-    'serviceKey' : os.environ["govopenKey"],
+    'serviceKey' : os.environ["GOVOPENKEY"],
     'sigunguCd'  : locate_code_1,
     'bjdongCd'   : locate_code_2,
     'numOfRows'  : num,

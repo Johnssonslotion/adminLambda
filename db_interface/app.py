@@ -3,7 +3,7 @@ import logging
 import json
 import os
 from decimal import Decimal
-from src.dynamo import dynamoApi
+from common_src import dynamo,apis
 from botocore.exceptions import ClientError
 
 
@@ -72,6 +72,7 @@ def common_response(payload, operation, dynamoDB):
     elif operations[operation] == 2:
         return PUT(payload, dynamoDB)
     else:
+        
         return ValueError('Parameter fail " : {}"')
     
 
@@ -85,7 +86,7 @@ def lambda_handler(event, context):
     
     logging.info(f"env:{aws_env},{dev_env},")
     
-    dynamoDB=dynamoApi(aws_env,dev_env,region,table_name)
+    dynamoDB=dynamo.dynamoApi(aws_env,dev_env,region,table_name)
     
     operation = event['httpMethod']
     operations = {
@@ -94,10 +95,6 @@ def lambda_handler(event, context):
         'PUT':  2, ### PUT 
     }
    
-    
-    
-    
-    
     if operation in operations:
         payload = event['queryStringParameters'] if operation == 'GET' else event['body'] ### 유의미한 데이터 받아오기
         try:

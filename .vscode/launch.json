@@ -8,10 +8,15 @@
         {
             "name": "Python: 현재 파일",
             "type": "python",
+            "cwd": "${workspaceFolder}",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": true
+            "env": {
+                "PYTHONPATH":"${workspaceFolder}"
+            },
+            "justMyCode": false
+
         },
         {
             "type": "aws-sam",
