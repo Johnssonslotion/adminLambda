@@ -1,4 +1,3 @@
-
 import logging
 import json
 import os
@@ -41,9 +40,7 @@ def PUT(payload,dynamoDB):
     status, results, message=dynamoDB.create_item(payload)
     if status == 200:
         return respond(ValueError(f'Unsupported method "{payload}"'))
-    
-        
-        
+            
     return respond()
     
 

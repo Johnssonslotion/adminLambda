@@ -3,13 +3,11 @@ import sys
 sys.path.append(os.getcwd())
 
 import logging
-import datetime
 import time
 import boto3
 import pandas as pd
 import dynamodbgeo
 
-import base64
 from common_src.src import constant
 from common_src import apis
 import time
@@ -289,8 +287,12 @@ class dynamoApi(object):
             e=self.targetDB.put_item(item=results["done"])
             return status, results, message
     
-    def geodynamodb(self,target,HASHKEY=6):
-        config = dynamodbgeo.GeoDataManagerConfiguration(self.client, target)
+    def geodynamodb(self,Table,Index=None,HASHKEY=None):
+        config = dynamodbgeo.GeoDataManagerConfiguration(self.client, Table)
+        if Index != None:
+            config.geohashIndexName=Index
+        if HASHKEY is None:
+            config.hashKeyLength = 6    
         config.hashKeyLength = HASHKEY 
         geoDataManager = dynamodbgeo.GeoDataManager(config)
         table_util = dynamodbgeo.GeoTableUtil(config)
@@ -321,9 +323,10 @@ class dynamoApi(object):
                 res_geo['lng']=None
                 res_geo['lat']=None
                 res_geo['crs']=None
+        _pk=str(_s['mgmBldrgstPk'].replace("-",""))
         
         item_dict={
-                "PK":                   {"S":_s['mgmBldrgstPk']},
+                "PK":                   {"S":str(_pk)},
                 "mainPurpsCd":          {"S":_s['mainPurpsCd']},
                 "mainPurpsCdNm":        {"S":_s['mainPurpsCdNm']},
                 }
@@ -347,13 +350,12 @@ class dynamoApi(object):
                 'Item':item_dict,
                 'ConditionExpression': "attribute_not_exists(PK)"
                 # ... Anything else to pass through to `putItem`, eg ConditionExpression
-
         }
         try:
             info=geoDataManager.put_Point(
             dynamodbgeo.PutPointInput(
                 dynamodbgeo.GeoPoint(float(res_geo['lat']), float(res_geo['lng'])), # latitude then latitude longitude
-                str(_s['mgmBldrgstPk']),
+                str(_pk),
                 #str( uuid.uuid4()), # Use this to ensure uniqueness of the hash/range pairs.
                 PutItemInput # pass the dict here
                 ))
@@ -364,7 +366,7 @@ class dynamoApi(object):
             # print(f"GEO INFO: {res_geo} / STATUS:{status}")
             
         result ={
-            "PK"                  : s["mgmBldrgstPk"],
+            "PK"                  : _pk,
             "case_1_addr_failures": err_0,
             "case_2_addr_failures": err_1,
             "case_3_put_failures" : err_2,
@@ -392,25 +394,23 @@ class dynamoApi(object):
                         ],
                         TableClass='STANDARD',
                         ProvisionedThroughput={
-                                                'ReadCapacityUnits': 2000,
-                                                'WriteCapacityUnits': 2000,
+                                                'ReadCapacityUnits': 10,
+                                                'WriteCapacityUnits': 10,
                                             }
                     )
         return info
     
-    def radius_query(self,Lat,Lng,radius,Table=None,Index=None):
-        
-        
+    def radius_query(self,Lat,Lng,radius,Table=None,Index=None,Hash=None):
         if Index==None:
             if Table==None:
-                geoDataManager=self.geodynamodb(self.client,self._table_name)
+                geoDataManager=self.geodynamodb(Table=self._table_name,Index=None,HASHKEY=Hash)
             else:
-                geoDataManager=self.geodynamodb(self.client,Table)
+                geoDataManager=self.geodynamodb(Table=Table,Index=None,HASHKEY=Hash)
         else:
             if Table==None:
-                geoDataManager=self.geodynamodb(self.client,self._table_name,Index)
+                geoDataManager=self.geodynamodb(Table=self._table_name,Index=Index,HASHKEY=Hash)
             else:
-                geoDataManager=self.geodynamodb(self.client,Table,Index)
+                geoDataManager=self.geodynamodb(Table=Table,Index=Index,HASHKEY=Hash)
         start_time = time.time()
     
         query_reduis_result=geoDataManager.queryRadius(
@@ -468,12 +468,45 @@ if __name__ =="__main__":
     print(f"Short indexing : Time {time.time()-st}")
     
     
-    # default_cord={
-    #     'lat':,
-    #     'lng':,
-    # }
+    default_cord={
+        'lat':36.4977,
+        'lng':127.2067,
+        'radius':10 
+    }
     
-    # conn.
+    
+    for i in range(1,5,1):
+        radius=pow(10,i)
+        st=time.time()
+        #def radius_query(self,Lat,Lng,radius,Table=None,Index=None):
+        conn.radius_query(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_0_build_info',Index=None,Hash=5)
+        print(f"TEST_CASE_0,HASH : 5,\t\t\t Full col  \t\t\t r: {radius}  \t\t\t Time {time.time()-st:.3f}")
+        st=time.time()
+        conn.radius_query(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_0_build_info',Index='geohash-opt',Hash=5)
+        print(f"TEST_CASE_0,HASH : 5,\t\t\t short Col \t\t\t r: {radius}  \t\t\t Time {time.time()-st:.3f}")
+    
+    for i in range(1,5,1):
+        radius=pow(10,i)
+        st=time.time()
+        conn.radius_query(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_1_build_info',Index=None,Hash=7)
+        print(f"TEST_CASE_1,HASH : 7,\t\t\t Full col  \t\t\t r: {radius}  \t\t\t Time :{time.time()-st:.3f}")
+        st=time.time()
+        conn.radius_query(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_1_build_info',Index='geohash-opt',Hash=7)
+        print(f"TEST_CASE_1,HASH : 7,\t\t\t short Col  \t\t\t r: {radius} \t\t\t Time :{time.time()-st:.3f}")
+        
+        
+    for i in range(1,5,1):
+        radius=pow(10,i)
+        st=time.time()
+        conn.radius_query(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_2_build_info',Hash=9)
+        print(f"TEST_CASE_2,HASH : 9,\t\t\t Full col \t\t\t r: {radius} \t\t\t Time :{time.time()-st:.3f}")
+        st=time.time()
+        conn.radius_query(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_2_build_info',Index='geohash-opt',Hash=9)
+        print(f"TEST_CASE_2,HASH : 9,\t\t\t short Col \t\t\t r: {radius} \t\t\t Time :{time.time()-st:.3f}")
+    
+    
+    #conn.client.close()
+    ## benchmark for geohash opti by grid search
     
     
     

@@ -1,15 +1,10 @@
-import logging
-# import json
 import os
 import sys
 sys.path.append(os.getcwd())
-# import requests
-# import xmltodict
+
+
+import logging
 import pandas as pd
-# import datetime
-# import dynamodbgeo
-# import uuid
-import sys
 
 from common_src import dynamo,apis
 from common_src.src import constant
@@ -142,41 +137,49 @@ if __name__=='__main__':
     
     conn=dynamo.dynamoApi(aws_env,dev_env,region,table_name,cli=cli)
 
-    geoDataManager_case_00   = conn.geodynamodb('TEST_CASE_0_build_info',5)
-    geoDataManager_case_01   = conn.geodynamodb('TEST_CASE_0_build_info_review_nobldnm',5)
-    geoDataManager_case_02   = conn.geodynamodb('TEST_CASE_0_build_info_review_noNewAddr',5)
-    geoDataManager_case_10   = conn.geodynamodb('TEST_CASE_1_build_info',7)
-    geoDataManager_case_11   = conn.geodynamodb('TEST_CASE_1_build_info_review_nobldnm',7)
-    geoDataManager_case_12   = conn.geodynamodb('TEST_CASE_1_build_info_review_noNewAddr',7)
-    geoDataManager_case_20   = conn.geodynamodb('TEST_CASE_2_build_info',9)
-    geoDataManager_case_21   = conn.geodynamodb('TEST_CASE_2_build_info_review_nobldnm',9)
-    geoDataManager_case_22   = conn.geodynamodb('TEST_CASE_2_build_info_review_noNewAddr',9)
-    conn.abnormal_table_init('TEST_CASE_0_build_info_review_address_failure')
-    conn.abnormal_table_init('TEST_CASE_1_build_info_review_address_failure')
-    conn.abnormal_table_init('TEST_CASE_2_build_info_review_address_failure')
+
+    geoDataManager_case_00   = conn.geodynamodb('_build_info',HASHKEY=7)
+    geoDataManager_case_01   = conn.geodynamodb('_build_info_review_nobldnm',HASHKEY=7)
+    geoDataManager_case_02   = conn.geodynamodb('_build_info_review_noNewAddr',HASHKEY=7)
+    # geoDataManager_case_10   = conn.geodynamodb('TEST_CASE_1_build_info',7)
+    # geoDataManager_case_11   = conn.geodynamodb('TEST_CASE_1_build_info_review_nobldnm',7)
+    # geoDataManager_case_12   = conn.geodynamodb('TEST_CASE_1_build_info_review_noNewAddr',7)
+    # geoDataManager_case_20   = conn.geodynamodb('TEST_CASE_2_build_info',9)
+    # geoDataManager_case_21   = conn.geodynamodb('TEST_CASE_2_build_info_review_nobldnm',9)
+    # geoDataManager_case_22   = conn.geodynamodb('TEST_CASE_2_build_info_review_noNewAddr',9)
+    conn.abnormal_table_init('_build_info_review_address_failure')
+    # conn.abnormal_table_init('TEST_CASE_1_build_info_review_address_failure')
+    # conn.abnormal_table_init('TEST_CASE_2_build_info_review_address_failure')
     
     
     ###############################################################
     
     
-    DBSET_1=[]
-    DBSET_1.append(geoDataManager_case_00)
-    DBSET_1.append(geoDataManager_case_01)
-    DBSET_1.append(geoDataManager_case_02)
-    DBSET_1.append('TEST_CASE_0_build_info_review_address_failure')
+    DBSET_0=[]
+    DBSET_0.append(geoDataManager_case_00)
+    DBSET_0.append(geoDataManager_case_01)
+    DBSET_0.append(geoDataManager_case_02)
+    DBSET_0.append('_0_build_info_review_address_failure')
+    
+    
+    # DBSET_1=[]
+    # DBSET_1.append(geoDataManager_case_00)
+    # DBSET_1.append(geoDataManager_case_01)
+    # DBSET_1.append(geoDataManager_case_02)
+    # DBSET_1.append('_0_build_info_review_address_failure')
 
     
-    DBSET_2=[]
-    DBSET_2.append(geoDataManager_case_10)
-    DBSET_2.append(geoDataManager_case_11)
-    DBSET_2.append(geoDataManager_case_12)
-    DBSET_2.append('TEST_CASE_1_build_info_review_address_failure')
+    # DBSET_2=[]
+    # DBSET_2.append(geoDataManager_case_10)
+    # DBSET_2.append(geoDataManager_case_11)
+    # DBSET_2.append(geoDataManager_case_12)
+    # DBSET_2.append('TEST_CASE_1_build_info_review_address_failure')
     
-    DBSET_3=[]
-    DBSET_3.append(geoDataManager_case_20)
-    DBSET_3.append(geoDataManager_case_21)
-    DBSET_3.append(geoDataManager_case_22)
-    DBSET_3.append('TEST_CASE_3_build_info_review_address_failure')
+    # DBSET_3=[]
+    # DBSET_3.append(geoDataManager_case_20)
+    # DBSET_3.append(geoDataManager_case_21)
+    # DBSET_3.append(geoDataManager_case_22)
+    # DBSET_3.append('TEST_CASE_3_build_info_review_address_failure')
 
 
     ####################### 진도 찾아서 자동으로 재시작 #######################
@@ -192,10 +195,10 @@ if __name__=='__main__':
     for index,i in enumerate(local_code.iloc):
       if i['exist']=="폐지":
             continue
-      if index <= 4316: ## 세종시 시작
-            continue
-      if index == 4475: ## 경기도 시작 
-            break
+      # if index <= 4316: ## 세종시 시작
+      #       continue
+      # if index == 4475: ## 경기도 시작 
+      #       break
     #   # if index == 5:
     #   #   break;
       #print(f"{index} : {i['Nm']} {i['exist']}")
@@ -220,8 +223,9 @@ if __name__=='__main__':
         logging.info("Normal Service")
         if target_dict['response']['body']['totalCount']!='0':
         ###### Sorting Target #######
-          INPUT_DB(target_dict,conn,DBSET_1)
-          INPUT_DB(target_dict,conn,DBSET_2)
+          INPUT_DB(target_dict,conn,DBSET_0)
+          # INPUT_DB(target_dict,conn,DBSET_2)
+          # INPUT_DB(target_dict,conn,DBSET_3)
         else:
             _a=i['Nm']
             logging.warning(f"{index}: No update {_a}")
