@@ -16,11 +16,11 @@ def respond(err, res=None):
     }
 
 
-def GET(payload,dynamoDB):
+def GET(payload,conn):
     message=""
     status =400
     try:
-        results=dynamoDB.scan()
+        results=conn.scan()
     except:
         status = 200
         message = "Call fail"
@@ -30,14 +30,31 @@ def GET(payload,dynamoDB):
     return status,results,message;
 
 
-def POST(payload,dynamoDB):
+def POST(payload,conn):
+    '''
+    POST 기능 
+    - Lat, Lng, Radius 를 입력했을 시 반응, 
+    - Single ID
+    - 
+    '''
+    
+    
+    
+    
     
     
     return 0;
 
 
-def PUT(payload,dynamoDB):
-    status, results, message=dynamoDB.create_item(payload)
+def PUT(payload,conn):
+    ### PUT은 work 등의 데이터를 갱신용,
+    conn
+    
+    
+    
+    
+    
+    
     if status == 200:
         return respond(ValueError(f'Unsupported method "{payload}"'))
             
@@ -47,6 +64,9 @@ def PUT(payload,dynamoDB):
     
 def common_response(payload, operation, dynamoDB):
     '''
+    reponse에 대한 분기 main 함수
+    
+    
     status  -> statusCode : 400 / 200
     body    -> 내용 전달
     message -> debug 용으로, 남겨둘 것

@@ -420,6 +420,31 @@ class dynamoApi(object):
 
         logging.info(f"Qtime:{time.time()-start_time}")
         return query_reduis_result
+    
+    def qurey_single_PK(self,PK):
+        assert type(PK) == 'str','Type == STR'
+        query_single_results=self.client.query(
+            TableName='TEST_CASE_0_build_info',
+            IndexName='PK-index',   
+            Select='ALL_ATTRIBUTES',
+            KeyConditions = {'PK': {
+                'AttributeValueList':[
+                  {
+                      'S':PK,
+                  },
+                    ],
+                'ComparisonOperator': 'EQ'
+                    }
+                }
+          )
+        return query_single_results
+    
+    def string_query(string):
+        '''
+        Elastic search를 통한 검색기능 이전,
+        '''
+        
+        return 0
 
 
 

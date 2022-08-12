@@ -196,7 +196,9 @@ if __name__=='__main__':
       if i['exist']=="폐지":
             continue
       # if index <= 4316: ## 세종시 시작
-      #       continue
+            # continue
+      if index <= 423 : ## 세종시 시작
+            continue
       # if index == 4475: ## 경기도 시작 
       #       break
     #   # if index == 5:
