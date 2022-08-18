@@ -13,7 +13,6 @@ from common_src import apis
 import time
 
 
-
 class dynamoApi(object):
     def __init__(self, aws_env, dev_env, region_name,table_name, cli=None):
         self._aws_env= aws_env
@@ -77,7 +76,7 @@ class dynamoApi(object):
                 
     def dynamoDB_tableInit(self):
         '''
-        내부 실험용 (Docker용)
+        내부 실험용 (SAM Docker용)
         '''
         self.resource.create_table(
                 TableName='build_info',
@@ -132,10 +131,6 @@ class dynamoApi(object):
                             'LNG',
                         ]
                     },
-                    'ProvisionedThroughput': {
-                        'ReadCapacityUnits': 1000,
-                        'WriteCapacityUnits': 1000
-                    }
                 },
                 {
                     'IndexName': 'NameBase',
@@ -158,18 +153,10 @@ class dynamoApi(object):
                             'LNG',
                         ]
                     },
-                    'ProvisionedThroughput': {
-                        'ReadCapacityUnits': 1000,
-                        'WriteCapacityUnits': 1000
-                    }
                 },
               ],
               TableClass='STANDARD',
-              ProvisionedThroughput={
-                                        'ReadCapacityUnits': 123,
-                                        'WriteCapacityUnits': 123
-                                    }
-                
+              BillingMode='PAY_PER_REQUEST',
             )
         
         
@@ -180,8 +167,6 @@ class dynamoApi(object):
         df=pd.read_csv("src/default.csv")
         
         ## 스키마 확인
-        
-        ## 'PK','GEOHASH','Lat','Lng','CRS',        
         
         
     
@@ -285,8 +270,7 @@ class dynamoApi(object):
             logging.info("[System] : 입력된 아이템은 dict 입니다.")
             status, results, message = self.data_validation(item)
             e=self.targetDB.put_item(item=results["done"])
-            return status, results, message
-    
+            return status, results, message   
     def geodynamodb(self,Table,Index=None,HASHKEY=None):
         config = dynamodbgeo.GeoDataManagerConfiguration(self.client, Table)
         if Index != None:
@@ -393,14 +377,11 @@ class dynamoApi(object):
                             {'AttributeName': 'LOCALCODE','KeyType': 'RANGE'},
                         ],
                         TableClass='STANDARD',
-                        ProvisionedThroughput={
-                                                'ReadCapacityUnits': 10,
-                                                'WriteCapacityUnits': 10,
-                                            }
+                        BillingMode='PAY_PER_REQUEST',
                     )
         return info
     
-    def radius_query(self,Lat,Lng,radius,Table=None,Index=None,Hash=None):
+    def query_radius(self,Lat,Lng,radius,Table=None,Index=None,Hash=None):
         if Index==None:
             if Table==None:
                 geoDataManager=self.geodynamodb(Table=self._table_name,Index=None,HASHKEY=Hash)
@@ -462,7 +443,7 @@ if __name__ =="__main__":
     logging.info(f"env:{aws_env},{dev_env},")
     
     '''
-    UNIT TEST index 별 속도 차이 테스트
+    UNIT TEST GEOHASH 별 속도 차이 테스트
     '''
     
     
@@ -504,29 +485,29 @@ if __name__ =="__main__":
         radius=pow(10,i)
         st=time.time()
         #def radius_query(self,Lat,Lng,radius,Table=None,Index=None):
-        conn.radius_query(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_0_build_info',Index=None,Hash=5)
+        conn.query_radius(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_0_build_info',Index=None,Hash=5)
         print(f"TEST_CASE_0,HASH : 5,\t\t\t Full col  \t\t\t r: {radius}  \t\t\t Time {time.time()-st:.3f}")
         st=time.time()
-        conn.radius_query(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_0_build_info',Index='geohash-opt',Hash=5)
+        conn.query_radius(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_0_build_info',Index='geohash-opt',Hash=5)
         print(f"TEST_CASE_0,HASH : 5,\t\t\t short Col \t\t\t r: {radius}  \t\t\t Time {time.time()-st:.3f}")
     
     for i in range(1,5,1):
         radius=pow(10,i)
         st=time.time()
-        conn.radius_query(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_1_build_info',Index=None,Hash=7)
+        conn.query_radius(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_1_build_info',Index=None,Hash=7)
         print(f"TEST_CASE_1,HASH : 7,\t\t\t Full col  \t\t\t r: {radius}  \t\t\t Time :{time.time()-st:.3f}")
         st=time.time()
-        conn.radius_query(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_1_build_info',Index='geohash-opt',Hash=7)
+        conn.query_radius(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_1_build_info',Index='geohash-opt',Hash=7)
         print(f"TEST_CASE_1,HASH : 7,\t\t\t short Col  \t\t\t r: {radius} \t\t\t Time :{time.time()-st:.3f}")
         
         
     for i in range(1,5,1):
         radius=pow(10,i)
         st=time.time()
-        conn.radius_query(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_2_build_info',Hash=9)
+        conn.query_radius(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_2_build_info',Hash=9)
         print(f"TEST_CASE_2,HASH : 9,\t\t\t Full col \t\t\t r: {radius} \t\t\t Time :{time.time()-st:.3f}")
         st=time.time()
-        conn.radius_query(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_2_build_info',Index='geohash-opt',Hash=9)
+        conn.query_radius(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_2_build_info',Index='geohash-opt',Hash=9)
         print(f"TEST_CASE_2,HASH : 9,\t\t\t short Col \t\t\t r: {radius} \t\t\t Time :{time.time()-st:.3f}")
     
     

@@ -129,7 +129,7 @@ if __name__=='__main__':
     local_path = os.path.join(os.getcwd(),'common_src/src/local_code.pickle')
 
     try: 
-      local_code = pd.read_pickle('/opt/local_code.pickle')
+      local_code = pd.read_pickle('/opt/local_code.pickle') ## local data
     except:
       local_code = pd.read_pickle(local_path) ## for local
 
@@ -197,7 +197,7 @@ if __name__=='__main__':
             continue
       # if index <= 4316: ## 세종시 시작
             # continue
-      if index <= 423 : ## 세종시 시작
+      if index <= 423 : 
             continue
       # if index == 4475: ## 경기도 시작 
       #       break

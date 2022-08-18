@@ -29,5 +29,5 @@ def base64_body_parser(event):
         return payload,info
     
 if __name__ == "__main__":
-    print("Test")
+    print("Test") ### unit test 완료 freeze
     
