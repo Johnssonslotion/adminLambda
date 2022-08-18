@@ -10,7 +10,15 @@ Globals:
     Timeout: 3
 
 Resources:
-  DbInterfaceFunction:
+  CommonSrc:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: common_src/
+      CompatibleRuntimes:
+        - python3.9
+    Metadata:
+      BuildMethod: python3.9
+  DBInterfaceFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       CodeUri: db_interface/
@@ -19,6 +27,13 @@ Resources:
       MemorySize: 128
       Timeout: 1000
       Policies: AmazonDynamoDBFullAccess
+      Layers:
+        - !Ref CommonSrc
+        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:dynamodb-geo:3
+        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:requests:4
+        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:pandas:1
+        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:xmltodict:2
+
       Architectures:
         - x86_64
       Events:
@@ -27,17 +42,18 @@ Resources:
           Properties:
             Path: /
             Method: POST
+      
   
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorldApi:
+  DBInterfaceAPI:
     Description: "API Gateway endpoint URL for Prod stage for Hello World function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/interface"
-  HelloWorldFunction:
+  DBInterfaceFunction:
     Description: "DBInterface Function Arn"
     Value: !GetAtt DBInterfaceFunction.Arn
-  HelloWorldFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt DBInterfaceFunctionIAM.Arn
+  # DBInterfaceFunctionIamRole:
+  #   Description: "DBInterface IAM Arn"
+  #   Value: !GetAtt DBInterfaceFunctionIAM.Arn

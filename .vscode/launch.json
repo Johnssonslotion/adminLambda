@@ -5,6 +5,7 @@
     "version": "0.2.0",
     "outputCapture": "std",
     "configurations": [
+        
         {
             "name": "Python: 현재 파일",
             "type": "python",
@@ -13,10 +14,9 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "env": {
-                "PYTHONPATH":"${workspaceFolder}"
+                "PYTHONPATH": "${workspaceFolder}"
             },
             "justMyCode": false
-
         },
         {
             "type": "aws-sam",
@@ -35,9 +35,10 @@
                     "AWSENV": "AWS_SAM_LOCAL",
                     "DEVENV": "OSX",
                     "REGION": "ap-northeast-2",
-                    "TABLE": "build_info",
+                    "TABLE": "build_info"
                 }
             }
         },
+                                
     ]
 }

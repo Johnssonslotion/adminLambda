@@ -1,0 +1,11 @@
+{
+    "serverlessConsole.services": [
+        {
+            "type": "dynamodb",
+            "title": "TEST_CASE_0_build_info",
+            "tableName": "TEST_CASE_0_build_info",
+            "awsProfile": "sw_seoul",
+            "region": "ap-northeast-2"
+        }
+    ]
+}

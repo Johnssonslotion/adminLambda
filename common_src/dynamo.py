@@ -8,8 +8,19 @@ import boto3
 import pandas as pd
 import dynamodbgeo
 
-from common_src.src import constant
-from common_src import apis
+
+### try -> lambda
+### except -> local
+
+try:
+    from src import constant
+except:
+    from common_src.src import constant
+
+try:
+    import apis
+except:
+    from common_src import apis ### local condition
 import time
 
 
@@ -38,13 +49,13 @@ class dynamoApi(object):
             try:
                 if self._table_name in self.client.list_tables()["TableNames"]:
                     if len(self.resource.Table(self._table_name).scan()['Items'])==0:
-                        logging.warn("No Items")
+                        logging.warning("No Items")
                         self.dynamoDB_dataInit()
                 else:
                     self.dynamoDB_tableInit()
                     self.dynamoDB_dataInit()
             except:
-                logging.warn("No init")
+                logging.warning("No init")
                 
         init_time=time_ck - time.time()
         logging.info(f"Init done : {init_time}")
@@ -271,7 +282,7 @@ class dynamoApi(object):
             status, results, message = self.data_validation(item)
             e=self.targetDB.put_item(item=results["done"])
             return status, results, message   
-    def geodynamodb(self,Table,Index=None,HASHKEY=None):
+    def geodynamodb(self,Table,Index=None,HASHKEY=None,Create_table=None):
         config = dynamodbgeo.GeoDataManagerConfiguration(self.client, Table)
         if Index != None:
             config.geohashIndexName=Index
@@ -279,11 +290,13 @@ class dynamoApi(object):
             config.hashKeyLength = 6    
         config.hashKeyLength = HASHKEY 
         geoDataManager = dynamodbgeo.GeoDataManager(config)
-        table_util = dynamodbgeo.GeoTableUtil(config)
-        create_table_input=table_util.getCreateTableRequest()
-        create_table_input["ProvisionedThroughput"]['ReadCapacityUnits']=5
-        table_util.create_table(create_table_input)
+        if Create_table is not None:
+            table_util = dynamodbgeo.GeoTableUtil(config)
+            create_table_input=table_util.getCreateTableRequest()
+            create_table_input["ProvisionedThroughput"]['ReadCapacityUnits']=5
+            table_util.create_table(create_table_input)
         return geoDataManager
+    
 
     def single_input(self,s,geoDataManager):
     ##
@@ -382,11 +395,13 @@ class dynamoApi(object):
         return info
     
     def query_radius(self,Lat,Lng,radius,Table=None,Index=None,Hash=None):
+        if Hash is None:
+            Hash = 5 ## default 값 설정
         if Index==None:
             if Table==None:
-                geoDataManager=self.geodynamodb(Table=self._table_name,Index=None,HASHKEY=Hash)
+                geoDataManager=self.geodynamodb(Table=self._table_name,HASHKEY=Hash)
             else:
-                geoDataManager=self.geodynamodb(Table=Table,Index=None,HASHKEY=Hash)
+                geoDataManager=self.geodynamodb(Table=Table,HASHKEY=Hash)
         else:
             if Table==None:
                 geoDataManager=self.geodynamodb(Table=self._table_name,Index=Index,HASHKEY=Hash)
@@ -479,7 +494,6 @@ if __name__ =="__main__":
         'lng':127.2067,
         'radius':10 
     }
-    
     
     for i in range(1,5,1):
         radius=pow(10,i)
