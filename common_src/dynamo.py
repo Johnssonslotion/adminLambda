@@ -1,5 +1,7 @@
 import os
 import sys
+
+
 sys.path.append(os.getcwd())
 
 import logging
@@ -15,14 +17,18 @@ from botocore.exceptions import ClientError
 
 try:
     from src import constant
+    import apis
+    
 except:
     from common_src.src import constant
-
-try:
-    import apis
-except:
     from common_src import apis ### local condition
-import time
+    
+    
+try:
+    from ..tests.benckmark import TEST_HASHOPT, TEST_NORMALSCAN    
+except:
+    from tests.benckmark import TEST_HASHOPT, TEST_NORMALSCAN
+    
 
 
 class dynamoApi(object):
@@ -307,7 +313,7 @@ class dynamoApi(object):
     
 
     def single_input(self,s,geoDataManager):
-    ##
+    ## TODO : Input
     
         '''
         단일 입력값 넣기    
@@ -451,11 +457,13 @@ class dynamoApi(object):
         return query_single_results,err
     
     def string_query(string):
+        # TODO : 검색을 위한 내용 추가
         '''
         Elastic search를 통한 검색기능 이전,
         '''
         
         return 0
+    
 
 
 
@@ -467,8 +475,8 @@ if __name__ =="__main__":
     dev_env                     = os.environ['DEVENV']
     region                      = os.environ['REGION']
     table_name                  = os.environ['TABLE']
-    aws_access_key_id           = os.environ['AWSACCESSKEY']
-    aws_secret_access_key       = os.environ['AWSSECRETKEY']
+    aws_access_key_id           = os.environ['AWS_ACCESS_KEY_ID']
+    aws_secret_access_key       = os.environ['AWS_SECRET_ACCESS_KEY']
     
     logging.info(f"env:{aws_env},{dev_env},")
     
@@ -486,58 +494,13 @@ if __name__ =="__main__":
     
     conn=dynamoApi(aws_env,dev_env,region,table_name,cli=cli)
     
-    st=time.time()
-    r=conn.client.scan(
-        TableName="build_info",
-        IndexName="geohash-index",
-        Limit=1000
-    )
-    
-    print(f"Full indexing : Time {time.time()-st}")
-    st=time.time()
-    r=conn.client.scan(
-        TableName="build_info",
-        IndexName="geohash-search",
-        Limit=1000
-    )
-    
-    print(f"Short indexing : Time {time.time()-st}")
+    TEST_NORMALSCAN(conn)
+    # TEST_HASHOPT(conn)
     
     
-    default_cord={
-        'lat':36.4977,
-        'lng':127.2067,
-        'radius':1000 
-    }
     
-    for i in range(1,5,1):
-        radius=pow(10,i)
-        st=time.time()
-        #def radius_query(self,Lat,Lng,radius,Table=None,Index=None):
-        conn.query_radius(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_0_build_info',Index=None,Hash=5)
-        print(f"TEST_CASE_0,HASH : 5,\t\t\t Full col  \t\t\t r: {radius}  \t\t\t Time {time.time()-st:.3f}")
-        st=time.time()
-        conn.query_radius(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_0_build_info',Index='geohash-opt',Hash=5)
-        print(f"TEST_CASE_0,HASH : 5,\t\t\t short Col \t\t\t r: {radius}  \t\t\t Time {time.time()-st:.3f}")
     
-    for i in range(1,5,1):
-        radius=pow(10,i)
-        st=time.time()
-        conn.query_radius(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_1_build_info',Index=None,Hash=7)
-        print(f"TEST_CASE_1,HASH : 7,\t\t\t Full col  \t\t\t r: {radius}  \t\t\t Time :{time.time()-st:.3f}")
-        st=time.time()
-        conn.query_radius(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_1_build_info',Index='geohash-opt',Hash=7)
-        print(f"TEST_CASE_1,HASH : 7,\t\t\t short Col  \t\t\t r: {radius} \t\t\t Time :{time.time()-st:.3f}")
-        
-        
-    for i in range(1,5,1):
-        radius=pow(10,i)
-        st=time.time()
-        conn.query_radius(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_2_build_info',Hash=9)
-        print(f"TEST_CASE_2,HASH : 9,\t\t\t Full col \t\t\t r: {radius} \t\t\t Time :{time.time()-st:.3f}")
-        st=time.time()
-        conn.query_radius(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=radius,Table='TEST_CASE_2_build_info',Index='geohash-opt',Hash=9)
-        print(f"TEST_CASE_2,HASH : 9,\t\t\t short Col \t\t\t r: {radius} \t\t\t Time :{time.time()-st:.3f}")
+    
     
     
     #conn.client.close()
