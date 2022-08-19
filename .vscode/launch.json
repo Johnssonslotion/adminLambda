@@ -21,7 +21,7 @@
         {
             "type": "aws-sam",
             "request": "direct-invoke",
-            "name": "ToiletDB:DBInterfaceFunction",
+            "name": "TEST_PK_SEARCH",
             "invokeTarget": {
                 "target": "template",
                 "templatePath": "template.yaml",
@@ -29,16 +29,78 @@
             },
             "lambda": {
                 "payload": {
-                    "path": "${cwd}/events/event.json"
+                    "path": "${cwd}/events/event_test_code_pk_search.json"
                 },
                 "environmentVariables": {
-                    "AWSENV": "AWS_SAM_LOCAL",
+                    "AWSENV": "AWS_SAM",
                     "DEVENV": "OSX",
                     "REGION": "ap-northeast-2",
-                    "TABLE": "build_info"
+                    "TABLE": "TEST_CASE_0_build_info"
                 }
             }
         },
-                                
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "TEST_RADIUS_SEARCH",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "template.yaml",
+                "logicalId": "DBInterfaceFunction"
+            },
+            "lambda": {
+                "payload": {
+                    "path": "${cwd}/events/event_test_code_radius_search.json"
+                },
+                "environmentVariables": {
+                    "AWSENV": "AWS_SAM",
+                    "DEVENV": "OSX",
+                    "REGION": "ap-northeast-2",
+                    "TABLE": "TEST_CASE_0_build_info"
+                }
+            }
+        },
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "TEST_ERROR_WRONG_INPUT",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "template.yaml",
+                "logicalId": "DBInterfaceFunction"
+            },
+            "lambda": {
+                "payload": {
+                    "path": "${cwd}/events/event_test_code_wrong_input.json"
+                },
+                "environmentVariables": {
+                    "AWSENV": "AWS_SAM",
+                    "DEVENV": "OSX",
+                    "REGION": "ap-northeast-2",
+                    "TABLE": "TEST_CASE_0_build_info"
+                }
+            }
+        },                    
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "TEST_Decoded",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "template.yaml",
+                "logicalId": "DBInterfaceFunction"
+            },
+            "lambda": {
+                "payload": {
+                    "path": "${cwd}/events/event_test_code_update_decoded.json"
+                },
+                "environmentVariables": {
+                    "AWSENV": "AWS_SAM",
+                    "DEVENV": "OSX",
+                    "REGION": "ap-northeast-2",
+                    "TABLE": "TEST_CASE_0_build_info"
+                }
+            }
+        },                        
     ]
 }
