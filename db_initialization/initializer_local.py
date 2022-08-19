@@ -129,7 +129,7 @@ if __name__=='__main__':
     local_path = os.path.join(os.getcwd(),'common_src/src/local_code.pickle')
 
     try: 
-      local_code = pd.read_pickle('/opt/local_code.pickle') ## local data
+      local_code = pd.read_pickle('/opt/local_code.pickle') ## lambda data
     except:
       local_code = pd.read_pickle(local_path) ## for local
 
@@ -138,9 +138,9 @@ if __name__=='__main__':
     conn=dynamo.dynamoApi(aws_env,dev_env,region,table_name,cli=cli)
 
 
-    geoDataManager_case_00   = conn.geodynamodb('_build_info',HASHKEY=7)
-    geoDataManager_case_01   = conn.geodynamodb('_build_info_review_nobldnm',HASHKEY=7)
-    geoDataManager_case_02   = conn.geodynamodb('_build_info_review_noNewAddr',HASHKEY=7)
+    geoDataManager_case_00   = conn.geodynamodb('_build_info',HASHKEY=7,Create_table=True)
+    geoDataManager_case_01   = conn.geodynamodb('_build_info_review_nobldnm',HASHKEY=7,Create_table=True)
+    geoDataManager_case_02   = conn.geodynamodb('_build_info_review_noNewAddr',HASHKEY=7,Create_table=True)
     # geoDataManager_case_10   = conn.geodynamodb('TEST_CASE_1_build_info',7)
     # geoDataManager_case_11   = conn.geodynamodb('TEST_CASE_1_build_info_review_nobldnm',7)
     # geoDataManager_case_12   = conn.geodynamodb('TEST_CASE_1_build_info_review_noNewAddr',7)

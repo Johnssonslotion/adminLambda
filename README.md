@@ -1,16 +1,13 @@
-# toiletdb
+# Toiletdb
 
 
-
-# 로컬환경에 따른 환경변수 추가
-venv - activate 에 있는 환경변수
-
-dynamodb 및 lambda 인터페이스를 위한 unitest 추가
-
+## Update log
+- local code 및 source 들을 layer로 만들어서 Test
+- 기능 추가 단일 검색
+- 기능 분절화 및 unittest 설정
 
 
-
-
+## SAM default
 
 This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI. It includes the following files and folders.
 
