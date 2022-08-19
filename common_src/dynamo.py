@@ -8,6 +8,7 @@ import boto3
 import pandas as pd
 import dynamodbgeo
 
+from botocore.exceptions import ClientError
 
 ### try -> lambda
 ### except -> local
@@ -54,7 +55,8 @@ class dynamoApi(object):
                 else:
                     self.dynamoDB_tableInit()
                     self.dynamoDB_dataInit()
-            except:
+            except Exception as e:
+                print(e)
                 logging.warning("No init")
                 
         init_time=time_ck - time.time()
@@ -74,14 +76,18 @@ class dynamoApi(object):
             else: ## linux
                 client=boto3.client('dynamodb',endpoint_url="http://127.0.0.1:8000/")
                 resource=boto3.resource('dynamodb',endpoint_url="http://127.0.0.1:8000/")
-        elif self._aws_env == "AWS_SAM_NET":
-            self.client = boto3.client(
-                'dynamodb',region_name=self.region,
-                )
-            self.resource=boto3.resource('dynamodb',region_name=self._region_name)
         else:
-            self.client = boto3.client('dynamodb',region_name=self.region)
-            self.resource=boto3.resource('dynamodb',region_name=self._region_name)
+            
+            client = boto3.client(
+                                        'dynamodb',region_name=self._region_name,
+                                         aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+                                         aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"]
+                                        )
+            resource=boto3.resource('dynamodb',
+                                         region_name=self._region_name,
+                                         aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+                                         aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"]
+                                         )
         return resource, client
     
                 
@@ -89,7 +95,8 @@ class dynamoApi(object):
         '''
         내부 실험용 (SAM Docker용)
         '''
-        self.resource.create_table(
+        try:
+            self.resource.create_table(
                 TableName='build_info',
                 AttributeDefinitions=[
                     {
@@ -169,7 +176,9 @@ class dynamoApi(object):
               TableClass='STANDARD',
               BillingMode='PAY_PER_REQUEST',
             )
-        
+        except ClientError as err:
+            return err
+            
         
     def dynamoDB_dataInit(self):
         ''' 
@@ -247,7 +256,6 @@ class dynamoApi(object):
             "anomaly_error" : anomaly_input,
             "null_error"    : null_input,
             }
-        
         
         #print(result)
         message=f'valid : {string_updated}, invalid : {string_notupdated}'
@@ -395,6 +403,7 @@ class dynamoApi(object):
         return info
     
     def query_radius(self,Lat,Lng,radius,Table=None,Index=None,Hash=None):
+        err=None
         if Hash is None:
             Hash = 5 ## default 값 설정
         if Index==None:
@@ -408,32 +417,38 @@ class dynamoApi(object):
             else:
                 geoDataManager=self.geodynamodb(Table=Table,Index=Index,HASHKEY=Hash)
         start_time = time.time()
-    
-        query_reduis_result=geoDataManager.queryRadius(
-        dynamodbgeo.QueryRadiusRequest(
-            dynamodbgeo.GeoPoint(Lat, Lng), # center point
-            radius,  sort = True)) # diameter
+        try:
+            query_reduis_result=geoDataManager.queryRadius(
+            dynamodbgeo.QueryRadiusRequest(
+                dynamodbgeo.GeoPoint(Lat, Lng), # center point
+                radius,  sort = True)) # diameter
 
-        logging.info(f"Qtime:{time.time()-start_time}")
-        return query_reduis_result
+            logging.info(f"Qtime:{time.time()-start_time}")
+        except ClientError as e:
+            err=e
+        return query_reduis_result, err
     
-    def qurey_single_PK(self,PK):
-        assert type(PK) == 'str','Type == STR'
-        query_single_results=self.client.query(
-            TableName='TEST_CASE_0_build_info',
-            IndexName='PK-index',   
-            Select='ALL_ATTRIBUTES',
-            KeyConditions = {'PK': {
-                'AttributeValueList':[
-                  {
-                      'S':PK,
-                  },
-                    ],
-                'ComparisonOperator': 'EQ'
+    def query_single_PK(self,PK):
+        assert type(PK) != 'str','Type == STR'
+        err={}
+        try:
+            query_single_results=self.client.query(
+                TableName='TEST_CASE_0_build_info',
+                IndexName='PK-index',   
+                Select='ALL_ATTRIBUTES',
+                KeyConditions = {'PK': {
+                    'AttributeValueList':[
+                    {
+                        'S':PK,
+                    },
+                        ],
+                    'ComparisonOperator': 'EQ'
+                        }
                     }
-                }
-          )
-        return query_single_results
+            )
+        except ClientError as e:
+            err=e
+        return query_single_results,err
     
     def string_query(string):
         '''
@@ -492,7 +507,7 @@ if __name__ =="__main__":
     default_cord={
         'lat':36.4977,
         'lng':127.2067,
-        'radius':10 
+        'radius':1000 
     }
     
     for i in range(1,5,1):
