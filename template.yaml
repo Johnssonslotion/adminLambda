@@ -33,7 +33,12 @@ Resources:
         - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:requests:4
         - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:pandas:1
         - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:xmltodict:2
-
+      Environment:
+        Variables:
+          AWSENV : "AWS_SAM"
+          DEVENV : "OSX"
+          REGION : "ap-northeast-2" 
+          TABLE : "build_info"
       Architectures:
         - x86_64
       Events:
