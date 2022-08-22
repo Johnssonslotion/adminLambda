@@ -21,18 +21,22 @@ def respond(err, res=None, step=None): ### error
     if type(res) is list:
         TotalCnt = len(res)    
     #print(f"BODY : {json.dumps(res,ensure_ascii=False)}")
-    
-    return {
-        'statusCode': '400' if err else '200',
-        'body': '[]' if err else json.dumps(res,ensure_ascii=False),
-        'headers': {
-            'Content-Type': 'application/json',
-        },
-        'meta': {
+    meta={
              'status': err.message if err else 'normal_condition',
              'step': step,
              'TotalCnt': TotalCnt
         }
+    
+    return {
+        'statusCode': '400' if err else '200',
+        'body': {
+            "items":'[]',
+            "meta" :json.dumps(meta)
+            } if err else json.dumps(res,ensure_ascii=False),
+        'headers': {
+            'Content-Type': 'application/json',
+        },
+        
     }
 
 def GET(event,conn):

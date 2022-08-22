@@ -1,5 +1,7 @@
 import time
 
+
+
 def TEST_NORMALSCAN(conn):
     st=time.time()
     r=conn.client.scan(
@@ -20,7 +22,7 @@ def TEST_NORMALSCAN(conn):
 
 
 
-
+## benchmark for geohash opti by grid search
 def TEST_HASHOPT(conn):
     default_cord={
         'lat':36.4977,
