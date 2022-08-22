@@ -1,8 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  toiletdb
-  Sample SAM Template for toiletdb
+  toiletdb interface with dbstore and management
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -10,9 +9,18 @@ Globals:
     Timeout: 3
 
 Resources:
+  DBInterFaceApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration: true # 
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 200
+
+
   CommonSrc:
     Type: AWS::Serverless::LayerVersion
     Properties:
+      LicenseInfo: "common_source_v0"
       ContentUri: common_src/
       CompatibleRuntimes:
         - python3.9
@@ -25,7 +33,7 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.9
       MemorySize: 128
-      Timeout: 1000
+      Timeout: 900
       Policies: AmazonDynamoDBFullAccess
       Layers:
         - !Ref CommonSrc
@@ -42,11 +50,13 @@ Resources:
       Architectures:
         - x86_64
       Events:
-        DBInterFace:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+      ## 연결안됨 수동으로 연결 추후 자동으로 연결할 수 있도록 설정 필요
+        DBInterFaceApi:
+          Type: HttpApi # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
+            Method: any
             Path: /
-            Method: POST
+            ApiId: !Ref DBInterFaceApi
       
   
 Outputs:
@@ -54,8 +64,8 @@ Outputs:
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
   DBInterfaceAPI:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/interface"
+    Description: "DB interface를 위한 ag"
+    Value: !Sub "https://${DBInterFaceApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/interface"
   DBInterfaceFunction:
     Description: "DBInterface Function Arn"
     Value: !GetAtt DBInterfaceFunction.Arn
