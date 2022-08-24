@@ -6,16 +6,33 @@ Description: >
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
+    Runtime: python3.9
+    MemorySize: 512
     Timeout: 3
 
 Resources:
   DBInterFaceApi:
     Type: AWS::Serverless::HttpApi
     Properties:
-      CorsConfiguration: true # 
+      CorsConfiguration:
+        AllowMethods: "'GET,POST'"
       DefaultRouteSettings:
         ThrottlingBurstLimit: 200
-
+      Tags:
+        Tag: "Map default config with route settings"
+  ### API Health check 를 위한 Lambda function
+  CheckApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: check_api/
+      Handler: app.lambda_handler
+      Events:
+        Api:
+          Type: HttpApi # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Method: get
+            Path: /
+            ApiId: !Ref DBInterFaceApi
 
   CommonSrc:
     Type: AWS::Serverless::LayerVersion
@@ -31,7 +48,6 @@ Resources:
     Properties:
       CodeUri: db_interface/
       Handler: app.lambda_handler
-      Runtime: python3.9
       MemorySize: 128
       Timeout: 900
       Policies: AmazonDynamoDBFullAccess
@@ -50,11 +66,11 @@ Resources:
       Architectures:
         - x86_64
       Events:
-      ## 연결안됨 수동으로 연결 추후 자동으로 연결할 수 있도록 설정 필요
-        DBInterFaceApi:
+      ## 연결 완료 payload 2.0에 따라 수정할 필요 있음
+        Api:
           Type: HttpApi # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Method: any
+            Method: post
             Path: /
             ApiId: !Ref DBInterFaceApi
       
