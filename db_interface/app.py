@@ -36,7 +36,6 @@ def respond(err, res=None, step=None): ### error
         'headers': {
             'Content-Type': 'application/json',
         },
-        
     }
 
 def GET(event,conn):
@@ -106,7 +105,7 @@ def POST(event,conn):
                 err=utils.err_("UserID should be required")
                 return respond(err,step='UPDATE_INFO')
         else:
-            logging.warning("Method error")
+            logging.error(f"Method error : {event}")
             err=utils.err_("parameter err")
             return respond(err=err)
         #################################
@@ -145,8 +144,8 @@ def common_response(event, operation, dynamoDB):
     elif operations[operation] == 2:
         return PUT(event, dynamoDB)
     else:
-        
-        return ValueError('Parameter fail " : {}"')
+        logging.error(f"payload err : {event}")
+        return 
     
 
 
@@ -160,8 +159,20 @@ def lambda_handler(event, context):
     
     logging.info(f"env:{aws_env},{dev_env},")    
     dynamoDB=dynamo.dynamoApi(aws_env,dev_env,region,table_name)
+    # print(type(event))
+    # print(event)
     
-    operation = event['httpMethod']
+    #### lambda apigateway payload 2.0 parsing
+    if "version" in event.keys():
+        if event["version"]=='2.0': 
+            operation = event['requestContext']["http"]["method"]
+        else:
+            err=utils.err_("Not supported payload")
+            logging.error(f"payload version : {event},{context}")
+            return respond(err)
+    else:
+        operation = event['httpMethod']
+    
     operations = {
         'GET':  0,
         'POST': 1, ### post medge
@@ -169,18 +180,17 @@ def lambda_handler(event, context):
     }
    
     if operation in operations:
-        payload = event['queryStringParameters'] if operation == 'GET' else event #['body'] ### 유의미한 데이터 받아오기 -> 바디 내부
         try:
+            payload = event['queryStringParameters'] if operation == 'GET' else event #['body'] ### 유의미한 데이터 받아오기 -> 바디 내부
             logging.info('[ Normal Method ] {operation} : {time.time}')
             return common_response(payload, operation,dynamoDB)
         except:
             err=utils.err_("payload err")
+            logging.error(f"payload err : {event},{context}")
             return respond(err)
-    else:
+    else: ## 호출될 일이 없음 (이 함수는 POST에 매칭되어있음)
         err=utils.err_("unsupported method")
         return respond(err)
-
-
 
 if __name__=="__main__":
     ## TODO lambda local testing 
