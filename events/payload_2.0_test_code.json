@@ -1,0 +1,33 @@
+{
+    "version": "2.0",
+    "routeKey": "POST /",
+    "rawPath": "/",
+    "rawQueryString": "",
+    "headers": {
+        "accept": "*/*",
+        "accept-encoding": "gzip, deflate, br",
+        "cache-control": "no-cache",
+        "content-length": "406",
+        "content-type": "multipart/form-data; boundary=--------------------------368577622867368881241890",
+        "host": "uwfym97g49.execute-api.ap-northeast-2.amazonaws.com",
+        "postman-token": "c4cb186e-ca14-4eda-aebc-0db98e2fd4a9",
+        "user-agent": "PostmanRuntime/7.29.2",
+        "x-amzn-trace-id": "Root=1-6305e4b6-2072aefd48801fe07f8c193d"
+    },
+    "requestContext": {
+
+        "http": {
+            "method": "POST",
+            "path": "/",
+            "protocol": "HTTP/1.1",
+            "userAgent": "PostmanRuntime/7.29.2"
+        },
+        "requestId": "XXCslg4KoE0EPqw=",
+        "routeKey": "POST /",
+        "stage": "$default",
+        "time": "24/Aug/2022:08:43:34 +0000",
+        "timeEpoch": 1661330614796
+    },
+    "body": "LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLTM2ODU3NzYyMjg2NzM2ODg4MTI0MTg5MA0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJsbmciDQoNCjM2LjQ4MDA2OTY4MjUxMjY2NA0KLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLTM2ODU3NzYyMjg2NzM2ODg4MTI0MTg5MA0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJsYXQiDQoNCjEyNy4yOTAxOTk2NDUzNzMzMw0KLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLTM2ODU3NzYyMjg2NzM2ODg4MTI0MTg5MA0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJyYWRpdXMiDQoNCjEwMDAwDQotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tMzY4NTc3NjIyODY3MzY4ODgxMjQxODkwLS0NCg==",
+    "isBase64Encoded": true
+}
