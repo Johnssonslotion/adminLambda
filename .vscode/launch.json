@@ -5,7 +5,23 @@
     "version": "0.2.0",
     "outputCapture": "std",
     "configurations": [
-        
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "API toiletdb:DBInterfaceFunction",
+            "invokeTarget": {
+                "target": "api",
+                "templatePath": "${workspaceFolder}/template.yaml",
+                "logicalId": "DBInterfaceFunction"
+            },
+            "api": {
+                "path": "/",
+                "httpMethod": "get",
+                "payload": {
+                    "json": {}
+                }
+            }
+        },
         {
             "name": "Python: 현재 파일",
             "type": "python",
@@ -80,7 +96,7 @@
                     "TABLE": "TEST_CASE_0_build_info"
                 }
             }
-        },                    
+        },
         {
             "type": "aws-sam",
             "request": "direct-invoke",
@@ -101,6 +117,6 @@
                     "TABLE": "TEST_CASE_0_build_info"
                 }
             }
-        },                        
+        }
     ]
 }
