@@ -5,7 +5,6 @@ def base64_body_parser(event):
         '''
         parser for lambda base encoding 
         '''
-        
         body = event["body"] ## body 인 경우
         info=[]
         keys=[]

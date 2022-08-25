@@ -67,8 +67,17 @@ def POST(event,conn):
                         lng= float(payload["lng"])
                         radius = int(payload["radius"])
                     except:
-                        logging.warning("Method error")
                         err=utils.err_(f"{info}: Lat, Lng type error")
+                        return respond(err=err)
+                    
+                    if lat < 0 or lat > 90:
+                        err=utils.err_(f"Lat value error : 0 < {lat} < 90",step='CALL_RADIUS')
+                        return respond(err=err)
+                    if lng < 0 or lng > 180:
+                        err=utils.err_(f"Lng value error : 0 < {lng} < 180",step='CALL_RADIUS')
+                        return respond(err=err)
+                    if radius < 0 or lng > 20000:
+                        err=utils.err_(f"Radius value error : 0 < {radius} < 20000",step='CALL_RADIUS')
                         return respond(err=err)
                     logging.info(f"Normal radius search")
                     query_results,err=conn.query_radius(lat,lng,radius,Table='TEST_CASE_0_build_info',Index='geohash-opt')
@@ -135,7 +144,6 @@ def common_response(event, operation, dynamoDB):
     if operations[operation] == 0:                    ### GET
         err,result,message= GET(event,dynamoDB)
         logging.info(message)
-        
         return respond(err,res=result)
             
     elif operations[operation] == 1:                  ### POST

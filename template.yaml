@@ -43,7 +43,7 @@ Resources:
         - python3.9
     Metadata:
       BuildMethod: python3.9
-  DBInterfaceFunction:
+  DBInterfaceFunction: ### 분리하자
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       CodeUri: db_interface/
@@ -73,13 +73,42 @@ Resources:
             Method: post
             Path: /
             ApiId: !Ref DBInterFaceApi
-      
+  GetDetails: ### 분리하자
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: db_detail/
+      Handler: app.lambda_handler
+      MemorySize: 128
+      Timeout: 900
+      Policies: AmazonDynamoDBFullAccess
+      Layers:
+        - !Ref CommonSrc
+        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:dynamodb-geo:3
+        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:requests:4
+        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:pandas:1
+        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:xmltodict:2
+      Environment:
+        Variables:
+          AWSENV : "AWS_SAM"
+          DEVENV : "OSX"
+          REGION : "ap-northeast-2" 
+          TABLE : "build_info"
+      Architectures:
+        - x86_64
+      Events:
+      ## 연결 완료 payload 2.0에 따라 수정할 필요 있음
+        Api:
+          Type: HttpApi # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Method: post
+            Path: /details/
+            ApiId: !Ref DBInterFaceApi
   
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  DBInterfaceAPI:
+  DBInterFaceAPI:
     Description: "DB interface를 위한 ag"
     Value: !Sub "https://${DBInterFaceApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/interface"
   DBInterfaceFunction:

@@ -8,6 +8,32 @@
         {
             "type": "aws-sam",
             "request": "direct-invoke",
+            "name": "Payload 2.0",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "template.yaml",
+                "logicalId": "DBInterfaceFunction"
+            },
+            "lambda": {
+                "payload": {
+                    "path": "${cwd}/events/payload_2.0_test_code.json"
+                },
+                "environmentVariables": {
+                    "AWSENV": "AWS_SAM",
+                    "DEVENV": "OSX",
+                    "REGION": "ap-northeast-2",
+                    "TABLE": "TEST_CASE_0_build_info"
+                }
+            }
+        },
+
+
+
+
+
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
             "name": "API toiletdb:DBInterfaceFunction",
             "invokeTarget": {
                 "target": "api",
@@ -41,7 +67,7 @@
             "invokeTarget": {
                 "target": "template",
                 "templatePath": "template.yaml",
-                "logicalId": "DBInterfaceFunction"
+                "logicalId": "GetDetails"
             },
             "lambda": {
                 "payload": {

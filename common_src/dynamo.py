@@ -1,5 +1,7 @@
+
 import os
 import sys
+from time import strftime
 
 
 sys.path.append(os.getcwd())
@@ -9,25 +11,29 @@ import time
 import boto3
 import pandas as pd
 import dynamodbgeo
+import json
 
 from botocore.exceptions import ClientError
+
+from dynamodbgeo.s2 import S2Manager
+
 
 ### try -> lambda
 ### except -> local
 
 try:
     from src import constant
-    import apis
+    import apis,utils
     
 except:
     from common_src.src import constant
-    from common_src import apis ### local condition
+    from common_src import apis,utils ### local condition
     
     
-try:
-    from ..tests.benckmark import TEST_HASHOPT, TEST_NORMALSCAN    
-except:
-    from tests.benckmark import TEST_HASHOPT, TEST_NORMALSCAN
+# try:
+#     from ..tests.benckmark import TEST_HASHOPT, TEST_NORMALSCAN    
+# except:
+#     from tests.benckmark import TEST_HASHOPT, TEST_NORMALSCAN
     
 
 
@@ -53,17 +59,17 @@ class dynamoApi(object):
             
             self.resource, self.client = self.dynamoDB_setting()
             ####### for local Test
-            try:
-                if self._table_name in self.client.list_tables()["TableNames"]:
-                    if len(self.resource.Table(self._table_name).scan()['Items'])==0:
-                        logging.warning("No Items")
-                        self.dynamoDB_dataInit()
-                else:
-                    self.dynamoDB_tableInit()
-                    self.dynamoDB_dataInit()
-            except Exception as e:
-                print(e)
-                logging.warning("No init")
+            # try:
+            #     if self._table_name in self.client.list_tables()["TableNames"]:
+            #         if len(self.resource.Table(self._table_name).scan()['Items'])==0:
+            #             logging.warning("No Items")
+            #             self.dynamoDB_dataInit()
+            #     else:
+            #         self.dynamoDB_tableInit()
+            #         self.dynamoDB_dataInit()
+            # except Exception as e:
+            #     print(e)
+            #     logging.warning("No init")
                 
         init_time=time_ck - time.time()
         logging.info(f"Init done : {init_time}")
@@ -88,6 +94,7 @@ class dynamoApi(object):
                                         'dynamodb',region_name=self._region_name,
                                          aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
                                          aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"]
+                                         
                                         )
             resource=boto3.resource('dynamodb',
                                          region_name=self._region_name,
@@ -194,7 +201,6 @@ class dynamoApi(object):
         
         ## 스키마 확인
         
-        
     
     def data_validation(self, payload):
         '''
@@ -210,7 +216,7 @@ class dynamoApi(object):
         #payload_holder = copy.deepcopy(payload)
         ko_KR       = constant.ko_KR
         type_check  = constant.type_check 
-        place_holder = constant.empty_check
+        place_holder = {i:None for i in constant.type_check.keys()}
         
         ######## EPSG:3857
 
@@ -221,6 +227,7 @@ class dynamoApi(object):
         anomaly_input   =   {} ### 입력값에 해당되지 않는 경우는 여기에 둔다.
         done            =   {} ### 입력완료는 여기에 둔다.
         ######## 타입이 다른 경우를 제외하고 입력하기 ###########
+        
         
         for i in payload.keys():                    
             if i not in type_check.keys():                       #### 예외 케이스 1. 해당되지 않은 것을 입력받았을 떄
@@ -266,37 +273,12 @@ class dynamoApi(object):
         #print(result)
         message=f'valid : {string_updated}, invalid : {string_notupdated}'
         return status, results, message
-    def create_item(self, items, basedb=False):
-        status = 200
-        message = None
-        results = None
-        if type(items) is list:
-            logging.info(f"[System] : 입력된 아이템은 List 입니다. Items:{len(items)}")
-            for i,item in enumerate(items):
-                err=[]
-                try:
-                    logging.info(f"{i+1}번째 입력시도")
-                    if basedb == False:
-                        status, results, message = self.data_validation(item)
-                        self.targetDB.put_item(item=results["done"])
-                        logging.info(f"{i+1}번째 입력성공")
-                    else:
-                        self.targetDB.put_item(item=item)
-                        logging.info(f"{i+1}번째 입력성공")
-                    status = 400
-                except :
-                    err.append(i)
-                    logging.warn(f"{i+1}번쨰 입력실패,[{message}]")
-                    results = None
-                    pass        
-                results=err
-            return status, results, message 
-        else:
-            logging.info("[System] : 입력된 아이템은 dict 입니다.")
-            status, results, message = self.data_validation(item)
-            e=self.targetDB.put_item(item=results["done"])
-            return status, results, message   
+     
     def geodynamodb(self,Table,Index=None,HASHKEY=None,Create_table=None):
+        '''
+        GEODYNAMODB에 대한 사전설정 GEOHASHING 및 GEOJSON 생성 및 관리 쪽은 이쪽에서
+        
+        '''
         config = dynamodbgeo.GeoDataManagerConfiguration(self.client, Table)
         if Index != None:
             config.geohashIndexName=Index
@@ -370,8 +352,10 @@ class dynamoApi(object):
                 #str( uuid.uuid4()), # Use this to ensure uniqueness of the hash/range pairs.
                 PutItemInput # pass the dict here
                 ))
-        except:
+        except Exception as e:
+            print(e)
             err_2=True
+            
             # print("------------ABNORMALCASE------------")
             # print(f"{item_dict}")
             # print(f"GEO INFO: {res_geo} / STATUS:{status}")
@@ -409,6 +393,10 @@ class dynamoApi(object):
         return info
     
     def query_radius(self,Lat,Lng,radius,Table=None,Index=None,Hash=None):
+        '''
+        lat, lng, radius 값을 받아서, 해당되는 범위를 검색해서 리턴
+        '''
+        query_redius_result=[]
         err=None
         if Hash is None:
             Hash = 5 ## default 값 설정
@@ -424,7 +412,7 @@ class dynamoApi(object):
                 geoDataManager=self.geodynamodb(Table=Table,Index=Index,HASHKEY=Hash)
         start_time = time.time()
         try:
-            query_reduis_result=geoDataManager.queryRadius(
+            query_redius_result=geoDataManager.queryRadius(
             dynamodbgeo.QueryRadiusRequest(
                 dynamodbgeo.GeoPoint(Lat, Lng), # center point
                 radius,  sort = True)) # diameter
@@ -432,14 +420,18 @@ class dynamoApi(object):
             logging.info(f"Qtime:{time.time()-start_time}")
         except ClientError as e:
             err=e
-        return query_reduis_result, err
+        return query_redius_result, err
     
-    def query_single_PK(self,PK):
+    def query_single_PK(self,PK,TableName=None):
+        ### 단일 쿼리 조회기능
         assert type(PK) != 'str','Type == STR'
-        err={}
+        err=None
+        query_single_results="Fail"
+        if TableName == None:
+            TableName = self._table_name
         try:
             query_single_results=self.client.query(
-                TableName='TEST_CASE_0_build_info',
+                TableName=TableName,
                 IndexName='PK-index',   
                 Select='ALL_ATTRIBUTES',
                 KeyConditions = {'PK': {
@@ -456,6 +448,180 @@ class dynamoApi(object):
             err=e
         return query_single_results,err
     
+    def drop_history(self,PK,TableName=None):
+        '''
+        history 
+        
+        '''
+        err=None
+        result=None
+        if TableName == None:
+            TableName = self._table_name
+            
+        ### 요청 1. 기존 데이터 확인
+        ### 쿼리 치고 partition key & sortkey 가져온 후 업데이트
+        res=self.client.query(TableName=TableName,IndexName='PK-index',Select='ALL_PROJECTED_ATTRIBUTES',KeyConditions={'PK':{'AttributeValueList':[{'S':PK}],'ComparisonOperator': 'EQ'}})
+        ### 정상이면, httpcode 200 -> count =1
+        if res['ResponseMetadata']['HTTPStatusCode'] == 200 and res['Count']== 1:
+            k1=res['Items'][0]['hashKey']
+            k2=res['Items'][0]['rangeKey']
+            Key={
+                'hashKey':k1,
+                'rangeKey':k2
+            }     
+            if 'Items' in res.keys():
+                before_item=res["Items"]
+            else:
+                err=utils.err_(f"error noitem: ${res['ResponseMetadata']}")
+                return result,err
+        else:
+            err=utils.err_(f"error connection: ${res['ResponseMetadata']}")
+            return result,err
+        
+        ### 요청 2. 업데이트 데이터 확인
+        updated_res=self.client.update_item(
+                    TableName=TableName,
+                    Key=Key,
+                    UpdateExpression="SET #H=:D",
+                    ExpressionAttributeNames={"#H": "HISTORY"},
+                    ExpressionAttributeValues={":D":{"L": []}},
+                    ReturnValues='UPDATED_NEW',
+                )
+        if updated_res['ResponseMetadata']["HTTPStatusCode"]==200:
+            if "Attributes" in updated_res.keys():
+                new_item=updated_res["Attributes"]
+            else:
+                err=utils.err_(f"error noitem: ${updated_res['ResponseMetadata']}")
+                return result,err
+        else:
+            err=utils.err_(f"error connection: ${updated_res['ResponseMetadata']}")
+            return result,err
+        before_item[0].pop("HISTORY")
+        result = {
+            "PK"    :PK,
+            "before":before_item,
+            "result":new_item, 
+        }
+        return result, err
+    
+    def add_history(self,PK,Update,TableName=None):
+        '''
+        Update 된 내용을 parsing
+        '''
+        err=None
+        result=None
+        if TableName == None:
+            TableName = self._table_name
+        ### 요청 1. 기존 데이터 확인
+        res=self.client.query(TableName=TableName,IndexName='PK-index',Select='ALL_PROJECTED_ATTRIBUTES',KeyConditions={'PK':{'AttributeValueList':[{'S':PK}],'ComparisonOperator': 'EQ'}})
+        ### 정상이면, httpcode 200 -> count =1
+        if res['ResponseMetadata']['HTTPStatusCode'] == 200 and res['Count']== 1:
+            k1=res['Items'][0]['hashKey']
+            k2=res['Items'][0]['rangeKey']
+            Key={
+                'hashKey':k1,
+                'rangeKey':k2
+            }     
+            if 'Items' in res.keys():
+                before_item=res["Items"]
+            else:
+                err=utils.err_(f"error noitem: ${res['ResponseMetadata']}")
+                return result,err
+        else:
+            err=utils.err_(f"error connection: ${res['ResponseMetadata']}")
+            return result,err
+        
+        if "HISTORY" in res["Items"][0].keys():
+            if len(res["Items"][0]["HISTORY"]['L'])!=0:
+                entryTime=json.loads(res['Items'][0]['HISTORY']['L'][-1]['S'])["updateTime"]["N"]
+                if time.time()-entryTime < 60:
+                    err=utils.err_(f"retry should be over 60s {strftime('%Y-%m-%d %I:%M:%S %p',time.localtime(entryTime))}")
+                    return result,err
+                
+        
+        ### 요청 2. 데이터 추가
+        
+        if Update['lat'] == None or Update['lng'] == None :
+            ### No update
+            nGenhash=before_item[0]["geohash"]
+            nGenjson=before_item[0]["geoJson"]
+        else:
+            nGenhash=S2Manager().generateGeohash(dynamodbgeo.GeoPoint(Update['lat'],Update['lng']))
+            nGenjson=dynamodbgeo.GeoPoint(Update['lat'],Update['lng'])
+        
+        if "HISTORY" in res['Items'][0].keys():
+            index=len(res['Items'][0]['HISTORY']['L'])
+        else:
+            index=0
+        
+        update_time=time.time()
+        update_user=Update['user']
+
+        ###############
+        Update.pop('lat')
+        Update.pop('lng')
+        Update.pop('user')
+        
+        placeholder={i:None for i in Update.keys()}
+        
+        for i in placeholder.keys():
+            if constant.type_check[i]==int:
+                placeholder[i] = {'N':Update[i]}
+            elif constant.type_check[i]==bool:
+                placeholder[i] = {'BOOL':Update[i]}
+            else: ## str
+                placeholder[i] = {'S':Update[i]}
+        
+        placeholder['index']        =  {"N":index}
+        placeholder['updateTime']   =  {"N":update_time}
+        placeholder['updateUser']   =  {"S":update_user}
+        placeholder['nGenhash']     =  {"N":nGenhash}
+        placeholder['nGenjson']     =  {"N":nGenjson}
+        
+        str=json.dumps(placeholder,ensure_ascii=False)
+        ### 요청 3. 데이터 삽입
+        
+        updated_res=self.client.update_item(
+                    TableName=TableName,
+                    Key=Key,
+                    UpdateExpression="SET #H=list_append(#H,:D)",
+                    ExpressionAttributeNames={"#H": "HISTORY"},
+                    ExpressionAttributeValues={":D":{"L": [{"S":str}]}},
+                    ReturnValues='UPDATED_NEW',
+                )
+        if updated_res['ResponseMetadata']["HTTPStatusCode"]==200:
+            if "Attributes" in updated_res.keys():
+                updated_item=updated_res["Attributes"]
+            else:
+                err=utils.err_(f"error no item: ${updated_res['ResponseMetadata']}")
+                return result, err
+        else:
+            err=utils.err_(f"error connection: ${updated_res['ResponseMetadata']}")
+            return result, err
+        
+        placeholder['updateUser']
+        result={
+            "PK"    :PK,
+            "before":list(before_item[0].keys()),
+            "result":{
+                "n"   :len(updated_item["HISTORY"]['L']),
+                "user":placeholder['updateUser']["S"],
+                "time":strftime('%Y-%m-%d %I:%M:%S %p',time.localtime(placeholder['updateTime']['N'])),
+            }
+        }
+        return result, err
+
+    def apply_history(self,PK,Update,TableName=None):
+        
+        
+        return 0
+    
+    def delete_history(self,PK,Update,TableName=None):
+        return 0
+        
+        
+    
+    
     def string_query(string):
         # TODO : 검색을 위한 내용 추가
         '''
@@ -468,6 +634,9 @@ class dynamoApi(object):
 
 
 if __name__ =="__main__":
+    from dotenv import load_dotenv
+    load_dotenv(verbose=True)
+    
     print("dynamo uni test")
     
     logging.basicConfig(format='[%(asctime)s] %(message)s')
@@ -484,7 +653,7 @@ if __name__ =="__main__":
     UNIT TEST GEOHASH 별 속도 차이 테스트
     '''
     
-    
+
     cli = boto3.client(
         'dynamodb', 
         region_name=region,
@@ -494,17 +663,132 @@ if __name__ =="__main__":
     
     conn=dynamoApi(aws_env,dev_env,region,table_name,cli=cli)
     
-    TEST_NORMALSCAN(conn)
+    # TEST_NORMALSCAN(conn)
     # TEST_HASHOPT(conn)
     
+    print(time.time())
+    print(time.localtime())
+    tm = time.localtime()
+    print(strftime('%Y-%m-%d %I:%M:%S %p', tm))
+
+    default_cord={
+        'lat':36.4977,
+        'lng':127.2067,
+        'radius':1000 
+    }
+    
+    a=conn.query_radius(Lat=default_cord['lat'],Lng=default_cord['lng'],radius=default_cord['radius'],Table='TEST_CASE_0_build_info',Index=None,Hash=5)
+    
+
+    PK='1234'
+    
+    
+    ### check data_validation
+    
+    PK="361101000028326"
+    
+    
+    
+    # def temp(PK):
+    item=conn.client.get_item(TableName="_test_db",Key={'hashKey':{'N':"38536"},'rangeKey':{'S':"361101000028326"}},) ### get_item은 스키마를 따라가며, decribe_table로 확인할수 있음 sort까지 동시에 필요
+    ## 호출 실패 케이스
+    #hashKey N rangeKey S
+    
+    if item['ResponseMetadata']['HTTPStatusCode'] == 200:
+        err=utils.err_("PK")
+        # return None, err
+
+    # 2분마다 한번씩 입력가능
+    try:
+        Enrolled_date=float(item['Item']['TIMESTAMP']['N']) ## timestamp
+        delta= time.time()-Enrolled_date
+        delta_sec=int(delta)
+    except:
+        delta=60 ## 입력안된 케이스 확인
+        
+
+    # if delta < 60: ## 60초 미만일때,
+    #     err=utils.err_("value")
+        
+    
+    # ## change owner
+    #### 입력 받을 구조 
+    
+    
+    
+    
+    default_cord={
+        'lat':36.4977,
+        'lng':127.2067,
+        'radius':1000 
+    }
     
     
     
     
     
     
-    #conn.client.close()
-    ## benchmark for geohash opti by grid search
+    
+    
+    
+    # TIMESTAMP=time.time()
+    # ### GEOHASH-GEN 
+    # nGenhash=S2Manager().generateGeohash(dynamodbgeo.GeoPoint(default_cord['lat'], default_cord['lng']))
+    # nGenjson=dynamodbgeo.GeoPoint(default_cord['lat'], default_cord['lng'])
+    
+    # item=conn.client.update_item(
+    #             TableName="test_db",
+    #             Key={
+    #                 'pk':{'S':'1235'},
+    #                 },
+    #             UpdateExpression="SET #H=:D",
+    #             ExpressionAttributeNames={"#H": "HISTORY"},
+    #             ExpressionAttributeValues={":D":{"L": []}}
+    #         )
+    
+    
+    
+    
+    ## https://stackoverflow.com/questions/57494372/storing-list-of-dict-in-a-dynamodb-table
+    
+    import json
+    temp={
+        "temp":"temp"
+    }
+    
+    
+    
+    
+    
+    
+    HashKey=target_HashKey
+    rangeKey=target_rangeKey
+    
+    
+    item=conn.client.update_item(
+            TableName="test_db",
+            Key={
+                'hashKey':{'N':HashKey},
+                'rangeKey':{'N':rangeKey}
+                },
+            UpdateExpression="SET #H=list_append(#H,:D)", #'SET #Y = :y, #AT = :t, #TIME= :tt',
+            #UpdateExpression="SET #H=:D", #'SET #Y = :y, #AT = :t, #TIME= :tt',
+            ExpressionAttributeNames={"#H": "HISTORY"},
+            ExpressionAttributeValues={":D":{"L": [{"S":"a"}]}}
+        )
+        
+  
+     
+    print(e)
+    a=conn.client.scan(TableName="test_db")
+
+# T=conn.resource.Table("test_db")
+
+
+
+# print(i)
+#     #conn.client.close()
+    
     
     
     
