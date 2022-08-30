@@ -1,0 +1,29 @@
+{
+    "version": "2.0",
+    "routeKey": "POST /details",
+    "rawPath": "/details",
+    "rawQueryString": "",
+    "headers": {
+        "accept": "*/*",
+        "accept-encoding": "gzip, deflate, br",
+        "cache-control": "no-cache",
+        "content-length": "941",
+        "content-type": "application/json",
+        "user-agent": "PostmanRuntime/7.29.2"
+    },
+    "requestContext": {
+        "http": {
+            "method": "POST",
+            "path": "/details",
+            "protocol": "HTTP/1.1",
+            "userAgent": "PostmanRuntime/7.29.2"
+        },
+        "requestId": "XdiVsgOYoE0EPtA=",
+        "routeKey": "POST /details",
+        "stage": "$default",
+        "time": "26/Aug/2022:08:01:01 +0000",
+        "timeEpoch": 1661500861896
+    },
+    "body": "LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLTQ0OTU1NjE4NDQ0NTA1MzI5NTkxNDAyMw0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJtZXRob2QiDQoNCkdFVF9ISVNUT1JZDQotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tNDQ5NTU2MTg0NDQ1MDUzMjk1OTE0MDIzDQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9IlBLIg0KDQozNjExMDEwMDAwMjgzMjYNCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS00NDk1NTYxODQ0NDUwNTMyOTU5MTQwMjMNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0idXNlciINCg0KdXNlcg0KLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLTQ0OTU1NjE4NDQ0NTA1MzI5NTkxNDAyMy0tDQo=",
+    "isBase64Encoded": true
+}

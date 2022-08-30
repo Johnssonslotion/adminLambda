@@ -8,15 +8,15 @@
         {
             "type": "aws-sam",
             "request": "direct-invoke",
-            "name": "Payload 2.0",
+            "name": "update_history",
             "invokeTarget": {
                 "target": "template",
                 "templatePath": "template.yaml",
-                "logicalId": "DBInterfaceFunction"
+                "logicalId": "GetDetails"
             },
             "lambda": {
                 "payload": {
-                    "path": "${cwd}/events/payload_2.0_test_code.json"
+                    "path": "${cwd}/events/payload_2.0_test_update.json"
                 },
                 "environmentVariables": {
                     "AWSENV": "AWS_SAM",
@@ -26,6 +26,111 @@
                 }
             }
         },
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "apply_history",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "template.yaml",
+                "logicalId": "GetDetails"
+            },
+            "lambda": {
+                "payload": {
+                    "path": "${cwd}/events/payload_2.0_test_apply_history.json"
+                },
+                "environmentVariables": {
+                    "AWSENV": "AWS_SAM",
+                    "DEVENV": "OSX",
+                    "REGION": "ap-northeast-2",
+                    "TABLE": "TEST_CASE_0_build_info"
+                }
+            }
+        },
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "get_info",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "template.yaml",
+                "logicalId": "GetDetails"
+            },
+            "lambda": {
+                "payload": {
+                    "path": "${cwd}/events/payload_2.0_test_get_info.json"
+                },
+                "environmentVariables": {
+                    "AWSENV": "AWS_SAM",
+                    "DEVENV": "OSX",
+                    "REGION": "ap-northeast-2",
+                    "TABLE": "TEST_CASE_0_build_info"
+                }
+            }
+        },{
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "get_history",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "template.yaml",
+                "logicalId": "GetDetails"
+            },
+            "lambda": {
+                "payload": {
+                    "path": "${cwd}/events/payload_2.0_test_get_history.json"
+                },
+                "environmentVariables": {
+                    "AWSENV": "AWS_SAM",
+                    "DEVENV": "OSX",
+                    "REGION": "ap-northeast-2",
+                    "TABLE": "TEST_CASE_0_build_info"
+                }
+            }
+        },
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "drop_history",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "template.yaml",
+                "logicalId": "GetDetails"
+            },
+            "lambda": {
+                "payload": {
+                    "path": "${cwd}/events/payload_2.0_test_drop_history.json"
+                },
+                "environmentVariables": {
+                    "AWSENV": "AWS_SAM",
+                    "DEVENV": "OSX",
+                    "REGION": "ap-northeast-2",
+                    "TABLE": "TEST_CASE_0_build_info"
+                }
+            }
+        },
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "Payload 2.0",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "template.yaml",
+                "logicalId": "GetDetails"
+            },
+            "lambda": {
+                "payload": {
+                    "path": "${cwd}/events/payload_2.0_encode.json"
+                },
+                "environmentVariables": {
+                    "AWSENV": "AWS_SAM",
+                    "DEVENV": "OSX",
+                    "REGION": "ap-northeast-2",
+                    "TABLE": "TEST_CASE_0_build_info"
+                }
+            }
+        },
+
 
 
 

@@ -9,6 +9,12 @@ Globals:
     Runtime: python3.9
     MemorySize: 512
     Timeout: 3
+    Environment:
+        Variables:
+          AWSENV : "AWS_SAM"
+          DEVENV : "OSX"
+          REGION : "ap-northeast-2" 
+          TABLE :  "TEST_CASE_0_build_info"
 
 Resources:
   DBInterFaceApi:
@@ -16,6 +22,8 @@ Resources:
     Properties:
       CorsConfiguration:
         AllowMethods: "'GET,POST'"
+        AllowOrigins: 
+          - "*"
       DefaultRouteSettings:
         ThrottlingBurstLimit: 200
       Tags:
@@ -33,7 +41,6 @@ Resources:
             Method: get
             Path: /
             ApiId: !Ref DBInterFaceApi
-
   CommonSrc:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -57,12 +64,7 @@ Resources:
         - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:requests:4
         - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:pandas:1
         - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:xmltodict:2
-      Environment:
-        Variables:
-          AWSENV : "AWS_SAM"
-          DEVENV : "OSX"
-          REGION : "ap-northeast-2" 
-          TABLE : "build_info"
+      
       Architectures:
         - x86_64
       Events:
@@ -87,12 +89,6 @@ Resources:
         - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:requests:4
         - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:pandas:1
         - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:xmltodict:2
-      Environment:
-        Variables:
-          AWSENV : "AWS_SAM"
-          DEVENV : "OSX"
-          REGION : "ap-northeast-2" 
-          TABLE : "build_info"
       Architectures:
         - x86_64
       Events:
@@ -101,7 +97,7 @@ Resources:
           Type: HttpApi # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Method: post
-            Path: /details/
+            Path: /details
             ApiId: !Ref DBInterFaceApi
   
 Outputs:
@@ -110,10 +106,10 @@ Outputs:
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
   DBInterFaceAPI:
     Description: "DB interface를 위한 ag"
-    Value: !Sub "https://${DBInterFaceApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/interface"
-  DBInterfaceFunction:
-    Description: "DBInterface Function Arn"
-    Value: !GetAtt DBInterfaceFunction.Arn
+    Value: !Sub "https://${DBInterFaceApi}.execute-api.${AWS::Region}.amazonaws.com/"
+  # DBInterfaceFunction:
+  #   Description: "DBInterface Function Arn"
+  #   Value: !GetAtt DBInterfaceFunction.Arn
   # DBInterfaceFunctionIamRole:
   #   Description: "DBInterface IAM Arn"
   #   Value: !GetAtt DBInterfaceFunctionIAM.Arn

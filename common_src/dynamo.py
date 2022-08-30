@@ -1,12 +1,14 @@
-
 import os
 import sys
 from time import strftime
+import logging
+logger=logging.getLogger("DYNAMODB")
+logger.info("DYNAMODB - START")
 
+import uuid
 
 sys.path.append(os.getcwd())
 
-import logging
 import time
 import boto3
 import pandas as pd
@@ -14,7 +16,6 @@ import dynamodbgeo
 import json
 
 from botocore.exceptions import ClientError
-
 from dynamodbgeo.s2 import S2Manager
 
 
@@ -50,7 +51,7 @@ class dynamoApi(object):
         ### Lambda 특성 상 3000ms 넘으면안됨 -> 설정 바꾸면 됨
         '''
         
-        print(time.ctime(time.time()))
+        logging.info("START DEBUG")
         time_ck = time.time()
         if cli != None:
             self.client = cli
@@ -92,14 +93,13 @@ class dynamoApi(object):
             
             client = boto3.client(
                                         'dynamodb',region_name=self._region_name,
-                                         aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-                                         aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"]
-                                         
+                                        #  aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+                                        #  aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"]
                                         )
             resource=boto3.resource('dynamodb',
                                          region_name=self._region_name,
-                                         aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-                                         aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"]
+                                        #  aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+                                        #  aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"]
                                          )
         return resource, client
     
@@ -227,6 +227,11 @@ class dynamoApi(object):
         anomaly_input   =   {} ### 입력값에 해당되지 않는 경우는 여기에 둔다.
         done            =   {} ### 입력완료는 여기에 둔다.
         ######## 타입이 다른 경우를 제외하고 입력하기 ###########
+        
+        if "lat" in payload.keys():
+            payload["lat"]=float(payload["lat"])
+        if "lng" in payload.keys():
+            payload["lng"]=float(payload["lng"])
         
         
         for i in payload.keys():                    
@@ -396,6 +401,7 @@ class dynamoApi(object):
         '''
         lat, lng, radius 값을 받아서, 해당되는 범위를 검색해서 리턴
         '''
+        print(Lat,Lng)
         query_redius_result=[]
         err=None
         if Hash is None:
@@ -420,6 +426,7 @@ class dynamoApi(object):
             logging.info(f"Qtime:{time.time()-start_time}")
         except ClientError as e:
             err=e
+            print(e)
         return query_redius_result, err
     
     def query_single_PK(self,PK,TableName=None):
@@ -446,6 +453,7 @@ class dynamoApi(object):
             )
         except ClientError as e:
             err=e
+            print(e)
         return query_single_results,err
     
     def drop_history(self,PK,TableName=None):
@@ -497,6 +505,7 @@ class dynamoApi(object):
             err=utils.err_(f"error connection: ${updated_res['ResponseMetadata']}")
             return result,err
         before_item[0].pop("HISTORY")
+        before_item[0].pop("Duuid")
         result = {
             "PK"    :PK,
             "before":before_item,
@@ -504,24 +513,35 @@ class dynamoApi(object):
         }
         return result, err
     
-    def add_history(self,PK,Update,TableName=None):
+    def add_history(self,PK,Update,USER,TableName=None):
         '''
         Update 된 내용을 parsing
+        Update에 들어가 있을 내용 : 
+        
+        
         '''
+        logging.info("START:ADD_HISTORY")
         err=None
         result=None
         if TableName == None:
             TableName = self._table_name
         ### 요청 1. 기존 데이터 확인
+        logging.info(f"INFO : Tablename : {TableName}")
         res=self.client.query(TableName=TableName,IndexName='PK-index',Select='ALL_PROJECTED_ATTRIBUTES',KeyConditions={'PK':{'AttributeValueList':[{'S':PK}],'ComparisonOperator': 'EQ'}})
         ### 정상이면, httpcode 200 -> count =1
+        
         if res['ResponseMetadata']['HTTPStatusCode'] == 200 and res['Count']== 1:
+            ### single c
+            
+            
             k1=res['Items'][0]['hashKey']
             k2=res['Items'][0]['rangeKey']
             Key={
-                'hashKey':k1,
-                'rangeKey':k2
-            }     
+                "hashKey":k1,
+                "rangeKey":k2
+            }
+            #Key = json.dumps(Key,ensure_ascii=False)
+            logging.info(f"KEY:{Key}")
             if 'Items' in res.keys():
                 before_item=res["Items"]
             else:
@@ -537,17 +557,27 @@ class dynamoApi(object):
                 if time.time()-entryTime < 60:
                     err=utils.err_(f"retry should be over 60s {strftime('%Y-%m-%d %I:%M:%S %p',time.localtime(entryTime))}")
                     return result,err
-                
+        else: ### 없을 떄 history 초기화
+            logging.info("NO HISTORY : INIT")
+            updated_res=self.client.update_item(
+                    TableName=TableName,
+                    Key=Key,
+                    UpdateExpression="SET #H=:D",
+                    ExpressionAttributeNames={"#H": "HISTORY"},
+                    ExpressionAttributeValues={":D":{"L": []}},
+                    ReturnValues='UPDATED_NEW',
+                )
+            logging.info(updated_res)
         
-        ### 요청 2. 데이터 추가
+        ### 요청 2. 데이터 추가할 데이터셋 생성 
         
         if Update['lat'] == None or Update['lng'] == None :
             ### No update
-            nGenhash=before_item[0]["geohash"]
-            nGenjson=before_item[0]["geoJson"]
+            nGeohash=before_item[0]["geohash"]
+            nGeojson=before_item[0]["geoJson"]
         else:
-            nGenhash=S2Manager().generateGeohash(dynamodbgeo.GeoPoint(Update['lat'],Update['lng']))
-            nGenjson=dynamodbgeo.GeoPoint(Update['lat'],Update['lng'])
+            nGeohash=S2Manager().generateGeohash(dynamodbgeo.GeoPoint(Update['lat'],Update['lng']))
+            nGeojson=f"{Update['lat']},{Update['lng']}"
         
         if "HISTORY" in res['Items'][0].keys():
             index=len(res['Items'][0]['HISTORY']['L'])
@@ -555,12 +585,11 @@ class dynamoApi(object):
             index=0
         
         update_time=time.time()
-        update_user=Update['user']
-
+        update_user=USER
+        update_UUID=str(uuid.uuid4())
         ###############
         Update.pop('lat')
         Update.pop('lng')
-        Update.pop('user')
         
         placeholder={i:None for i in Update.keys()}
         
@@ -573,20 +602,23 @@ class dynamoApi(object):
                 placeholder[i] = {'S':Update[i]}
         
         placeholder['index']        =  {"N":index}
+        placeholder['uuid']         =  {"B":update_UUID}
         placeholder['updateTime']   =  {"N":update_time}
         placeholder['updateUser']   =  {"S":update_user}
-        placeholder['nGenhash']     =  {"N":nGenhash}
-        placeholder['nGenjson']     =  {"N":nGenjson}
+        placeholder['nGeohash']     =  {"N":nGeohash}
+        placeholder['nGeojson']     =  {"N":nGeojson}
         
-        str=json.dumps(placeholder,ensure_ascii=False)
+        str_info=json.dumps(placeholder,ensure_ascii=False)
         ### 요청 3. 데이터 삽입
+        # test=self.client.get_item(TableName=TableName,Key=Key)
+        # logging.info(test)
         
         updated_res=self.client.update_item(
                     TableName=TableName,
                     Key=Key,
-                    UpdateExpression="SET #H=list_append(#H,:D)",
+                    UpdateExpression="SET #H=list_append(:D,#H)",
                     ExpressionAttributeNames={"#H": "HISTORY"},
-                    ExpressionAttributeValues={":D":{"L": [{"S":str}]}},
+                    ExpressionAttributeValues={":D":{"L": [{"S":str_info}]}},
                     ReturnValues='UPDATED_NEW',
                 )
         if updated_res['ResponseMetadata']["HTTPStatusCode"]==200:
@@ -611,10 +643,145 @@ class dynamoApi(object):
         }
         return result, err
 
-    def apply_history(self,PK,Update,TableName=None):
+    def apply_history(self,PK,NUM,USER,TableName=None):
+        '''
+        HISTORY를 적용함
+        
+        '''
+        ### 
+        logging.info("START:APPLY_HISTORY")
+        NUM=int(NUM) 
+        assert type(NUM)==int,"입력된 NUM은 상수여야함"
+        err=None
+        result=None
+        if TableName == None:
+            TableName = self._table_name
+        ### 요청 1. 기존 데이터 확인
+        logging.info(f"INFO : Tablename : {TableName}")
+        res=self.client.query(TableName=TableName,IndexName='PK-index',Select='ALL_PROJECTED_ATTRIBUTES',KeyConditions={'PK':{'AttributeValueList':[{'S':PK}],'ComparisonOperator': 'EQ'}})
+        ### 정상이면, httpcode 200 -> count =1
+        
+        if res['ResponseMetadata']['HTTPStatusCode'] == 200 and res['Count']== 1:
+            ### single c
+            k1=res['Items'][0]['hashKey']
+            k2=res['Items'][0]['rangeKey']
+            Key={
+                "hashKey":k1,
+                "rangeKey":k2
+            }
+            #Key = json.dumps(Key,ensure_ascii=False)
+            logging.info(f"KEY:{Key}")
+            if 'Items' in res.keys():
+                before_item=res["Items"]
+            else:
+                err=utils.err_(f"error noitem: ${res['ResponseMetadata']}")
+                return result,err
+        else:
+            err=utils.err_(f"error connection: ${res['ResponseMetadata']}")
+            return result,err
         
         
-        return 0
+        ## HISTORY 항목에 대한 예외처리 / 1. HISTORY가 없을때, 2. HISTORY가 있는데 아무것도 없을때, 3. HISTORY가 있으나, 
+        
+        if "HISTORY" not in res["Items"][0].keys():
+            logging.info("NO HISTORY : INIT")
+            updated_res=self.client.update_item(
+                    TableName=TableName,
+                    Key=Key,
+                    UpdateExpression="SET #H=:D",
+                    ExpressionAttributeNames={"#H": "HISTORY"},
+                    ExpressionAttributeValues={":D":{"L": []}},
+                    ReturnValues='UPDATED_NEW',
+                )
+            logging.info(updated_res)
+            err=utils.err_("NO HISTORY: RETURN")
+            return result,err
+            
+        elif len(res["Items"][0]["HISTORY"])== 0: ### 없을 떄 history 초기화
+            logging.info("NO HISTORY ELEMENTS : RETURN")
+            err=utils.err_("NO HISTORY ELEMENTS : RETURN")
+            return result,err
+        
+        elif len(res["Items"][0]["HISTORY"]) < NUM:
+            logging.info("HISTORY Range OVER")
+            err=utils.err_("HISTORY Range OVER")
+            return result,err
+            
+        else:
+            ## 필요값 생성
+            str_info=res['Items'][0]['HISTORY']['L'][NUM]['S']
+            info=json.loads(str_info)
+            
+            if "DUUID" in res["Items"][0].keys(): #중복 체크 일단 disable
+                if res["Items"][0]["DUUID"]["B"] == info["uuid"]["B"]:
+                    result={"status":"updated"}
+                    return result,err
+            
+            applyTimestamp=str(time.time())
+            applyUser=str(USER)
+            
+            exp_gen=0
+            Names={}
+            Values={}
+            Exp_string="SET"
+            
+            ### Null 을 제외한 값 업데이트
+            for i in constant.update_column.values():
+                if info[i]!=None:
+                    if list(info[i].values())[0]!=None:
+                        #### 왜 Type 이 지정된 None값이 들어가지? 버그 validation 항목 체크
+                        
+                        Names[f"#AT{exp_gen}"]=f"D{i}"
+                        Values[f":V{exp_gen}"]=info[i]
+                        Exp_string=f"{Exp_string} #AT{exp_gen}=:V{exp_gen},"
+                        exp_gen+=1
+                else:
+                    continue
+            ## 마지막 , 빼기
+            Names[f"#AT{exp_gen}"]="DapplyTimestamp"
+            Values[f":V{exp_gen}"]={"S":str(applyTimestamp)}
+            Exp_string=f"{Exp_string} #AT{exp_gen}=:V{exp_gen},"
+            exp_gen+=1
+            Names[f"#AT{exp_gen}"]="DapplyUser"
+            Values[f":V{exp_gen}"]={"S":applyUser}
+            Exp_string=f"{Exp_string} #AT{exp_gen}=:V{exp_gen},"
+            Exp_string=Exp_string[:len(Exp_string)-1]
+            
+            logging.info(f"S: {Exp_string}")   
+            logging.info(f"N: {Names}")   
+            logging.info(f"V: {Values}")   
+            
+            updated_res=self.client.update_item(
+                    TableName=TableName,
+                    Key=Key,
+                    UpdateExpression=Exp_string,
+                    ExpressionAttributeNames=Names,
+                    ExpressionAttributeValues=Values,
+                    ReturnValues='UPDATED_NEW',
+                )
+            logging.info(updated_res)                
+        if updated_res['ResponseMetadata']["HTTPStatusCode"]==200:
+            if "Attributes" in updated_res.keys():
+                updated_item=updated_res["Attributes"]
+                updated_item.pop('Duuid')
+                logging.info(f"Attr:{updated_item}")
+            else:
+                err=utils.err_(f"error no item: ${updated_res['ResponseMetadata']}")
+                return result, err
+        else:
+            err=utils.err_(f"error connection: ${updated_res['ResponseMetadata']}")
+            return result, err
+        
+        result={
+            "PK"    :PK,
+            "result":{
+                "update":updated_item,
+            }
+        }
+        return result, err
+    
+    
+    
     
     def delete_history(self,PK,Update,TableName=None):
         return 0
@@ -710,8 +877,7 @@ if __name__ =="__main__":
     # if delta < 60: ## 60초 미만일때,
     #     err=utils.err_("value")
         
-    
-    # ## change owner
+    ### change owner
     #### 입력 받을 구조 
     
     

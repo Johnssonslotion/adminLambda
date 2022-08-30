@@ -1,3 +1,8 @@
+import logging
+logger = logging.getLogger("DETAIL-LAMBDA")
+logger.info("DETAILS - START")
+logger.setLevel(logging.INFO)
+
 import os
 import sys
 sys.path.append(os.getcwd())
@@ -41,6 +46,7 @@ def respond(err, res=None, step=None): ### error
     
     
 def common_action(conn,payload,debug=None):
+    logging.info("start common_action")
     method=payload["method"]
     if method == "GET_INFO":
         '''
@@ -58,13 +64,13 @@ def common_action(conn,payload,debug=None):
         필수 method / PK / num -> 권한문제는 lambda 앞단 auth단에서 해결
         '''
         return drop_history(conn,payload,debug=None)
-    elif method == "SELECT_HISTORY":
+    elif method == "APPLY_HISTORY":
         '''
         이력 선택
         필수 method / PK / update -> 권한문제는 lambda 앞단 auth단에서 해결
         
         '''
-        return select_history(conn,payload,debug=None)
+        return apply_history(conn,payload,debug=None)
     elif method == "DELETE_HISTORY":
         '''
         이력 단일삭제
@@ -74,10 +80,12 @@ def common_action(conn,payload,debug=None):
     elif method == "UPDATE_ITEM":
         '''
         히스토리 업데이트 및 미반영
-        UPDATE_ITEM -> SELECT_HISTORY를 통해서 적용
+        UPDATE_ITEM -> APPI_HISTORY를 통해서 적용
         '''
         return update_item(conn,payload,debug=None);
-    
+    else:
+        err=utils.err_("No method")
+        return respond(err)
     
     
 def get_info(conn,payload,debug=None):
@@ -85,16 +93,26 @@ def get_info(conn,payload,debug=None):
     Test일 때 TestDB에서만 작동
     임의의 화장실 hardcoding
     '''
+    logging.info("start getinfo")
     if 'test' in payload.keys():
+        logging.info("test mode")
         TableName="_test_db"
         payload["PK"]="361101000028326"
     else:
         TableName=None
     if 'PK' in payload.keys():
-        logging.info(f"Normal single search")
+        logging.info(f"Normal process [single search]")
         query_results,err=conn.query_single_PK(payload["PK"],TableName=TableName)
+        logging.info(f"result: {query_results}")
         if "HISTORY" in query_results["Items"][0].keys():
-            query_results["Items"][0].pop("HISTORY")
+            try:
+                query_results["Items"][0].pop("HISTORY")
+            except:
+                logging.info("NO HISTORY")
+            try:
+                query_results["Items"][0].pop("Duuid")
+            except:
+                logging.info("NO Duuid")
         if debug is not None:
             item=query_results
         else:
@@ -105,7 +123,7 @@ def get_info(conn,payload,debug=None):
             item=query_results
         
         if err is None:
-            #logging.info(f"Normal process in CALL_PK : ID:{info}")
+            logging.info(f"result: {query_results}")
             return respond(err,res=item,step='GET_INFO');
         else:
             return respond(err,step='GET_INFO')
@@ -118,6 +136,7 @@ def get_history(conn,payload,debug=None):
     Test일 때 TestDB에서만 작동
     임의의 화장실 hardcoding
     '''
+    logging.info("start getinfo")
     if 'test' in payload.keys():
         TableName="_test_db"
         payload["PK"]="361101000028326"
@@ -127,14 +146,14 @@ def get_history(conn,payload,debug=None):
     if 'PK' in payload.keys():
         logging.info(f"Normal single search")
         query_results,err=conn.query_single_PK(payload["PK"],TableName=TableName)
-        
+        logging.info(f"qresult:{query_results}")
         ### items 가 없을 경우 (검색 성공했으나, 리턴값 없을 떄)
         if "Items" in query_results.keys():
         ### items 가 단일 값인가? 
             if len(query_results['Items']) == 1:
             ### history가 등록되어있는가?
-                if "history" in query_results['Items'][0].keys():
-                    item=query_results["history"]
+                if "HISTORY" in query_results['Items'][0].keys():
+                    item=query_results['Items'][0]["HISTORY"]
                 else:
                     item=[]
                 res={
@@ -165,6 +184,7 @@ def drop_history(conn,payload,debug=None):
     return respond(err,res=result,step="DROP_HISTORY");
 
 def update_item(conn,payload,debug=None):
+    logging.info("start update_item")
     if 'test' in payload.keys():
         TableName="_test_db"
         payload["PK"]="361101000028326"
@@ -179,10 +199,12 @@ def update_item(conn,payload,debug=None):
                     err = utils.err_(f"input item error, {type(check)}")
                 else: 
                     status, confirmed, message = conn.data_validation(check)
+                    logging.info(f"validation result : {confirmed}")
+                    logging.info(f"payload : {payload}")
                     if status == 200:
                         target=confirmed['done']
-                        target["user"]=payload["user"]
-                        result,err=conn.add_history(payload["PK"],target,TableName=TableName)
+                        user=payload["user"]
+                        result,err=conn.add_history(payload["PK"],target,user,TableName=TableName)
                     else:
                         err = utils.err_(message)
             else:
@@ -197,8 +219,23 @@ def update_item(conn,payload,debug=None):
         return respond(err,step='UPDATE_ITEM')
     
 
-def select_history(conn,payload,debug=None):
-    return 0;
+def apply_history(conn,payload,debug=None):
+    logging.info("start update_item")
+    if 'test' in payload.keys():
+        TableName="_test_db"
+        payload["PK"]="361101000028326"
+        payload["user"]="user00"
+    else:
+        TableName=None
+    if "user" in payload.keys():
+        if "PK" in payload.keys():
+            if 'NUM' in payload.keys():
+                result,err=conn.apply_history(payload["PK"],payload["NUM"],payload["user"],TableName=TableName)
+    if err == None:
+        logging.info(f"Normal process in APPLY_HISTORY : {result}")
+        return respond(err,res=result,step='APPLY_HISTORY');
+    else:
+        return respond(err,step='APPLY_HISTORY')            
 
 def delete_history(conn,payload,debug=None):
     return 0;
@@ -206,16 +243,20 @@ def delete_history(conn,payload,debug=None):
     
 
 def lambda_handler(event, context):
-    logging.basicConfig(format='[%(asctime)s] %(message)s')
 
+    logging.basicConfig(format='[%(asctime)s] %(message)s')
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    
     aws_env      = os.environ['AWSENV']
     dev_env      = os.environ['DEVENV']
     region       = os.environ['REGION']
     table_name   = os.environ['TABLE']
+    logging.info(f"env:{aws_env},{dev_env},")
     
-    logging.info(f"env:{aws_env},{dev_env},")    
+        
     conn=dynamo.dynamoApi(aws_env,dev_env,region,table_name)
-    
+    logging.info(f"init:conn")
     ### validate payload 
     if "version" in event.keys():
         if event["version"]=='2.0': 
@@ -233,7 +274,8 @@ def lambda_handler(event, context):
     
     
     ### parse payload
-    payload,info,err=utils.base64_body_parser(event) ## base64로 parser 
+    logging.info(event)
+    payload,err=utils.base64_body_parser(event) ## base64로 parser 
     ### TODO User parsing and store
     if "debug" in event["headers"].keys():
         if event["headers"]["debug"]== True:
@@ -245,102 +287,6 @@ def lambda_handler(event, context):
     
     if "method" in payload.keys():
         return common_action(conn,payload,DEBUG)
-
-    
-def testcase_gen(method,pk,input,user=None):     
-    event={}
-    context=None
-    headers={
-        "debug":True
-    }
-    version="2.0"
-    requestContext={
-        "http":{"method":"POST"}
-    }
-    
-    body={
-        "method":method,
-        "PK":pk,
-        "input":input,
-        "test":True,
-        "user":user
-    }
-    #str=base64.b64encode(json.dumps(body).encode('utf-8'))
-    event["headers"]=headers
-    event["body"]=body
-    event["version"]=version
-    event["requestContext"]=requestContext
-    event["isBase64Encoded"]=False
-    return event,context
-    
-    
-    
-    
-    
-if __name__ == "__main__":
-    event,context=testcase_gen(method="GET_INFO",pk="1234",input=None)
-    case1=lambda_handler(event, context)
-    print("GETINFO:/t/t/t/t/t",case1)
-    del case1
-    event,context=testcase_gen(method="GET_HISTORY",pk="1234",input=None)
-    case2=lambda_handler(event, context)
-    print("GETHISTORY:/t/t/t/t/t",case2)
-    del case2
-    event,context=testcase_gen(method="DROP_HISTORY",pk="1234",input=None)
-    case3=lambda_handler(event, context)
-    print("DROPHISTORY:/t/t/t/t/t",case3)
-    del case3
-    
-    
-    input= {
-        "lat"        : '34.444',
-        "lng"        : '123.444',
-        "toiletType" : 'N',   ###"화장실타입", 'G 범용화장실 | S 장애인전용 | 
-        "entryLoc"   : False,
-        "entryFind"  : False,
-        "entryThold" : False,
-        "entryDotB"  : False,
-        "entryDotS"  : False,
-        "entryAuto"  : False,
-        "entrySpace" : False,
-        "maleFamale" : False,
-        "floarMatr"  : False,
-        "washExist"  : False,
-        "washMalF"   : False,
-        "washEasy"   : False,
-        "handRailEX" : False,
-        "handRailMF" : False,
-        "childKeepEX": False,
-        "childKeepMF": False,
-        "backKeepEX": False,
-        "backKeepMF": False,
-        "trashBin": False,
-        "emerCall": False,
-        "cleanChartEx": False,
-        "cleanChartMg": False,
-        "cleanToolLf": False,
-        "noclean": False,
-        "noSupplies": False
-        }
-    
-    
-    event,context=testcase_gen(method="UPDATE_ITEM",pk="1234",input=input, user="user01")
-    case4=lambda_handler(event, context)
-    print("UPDATEITEM:/t/t/t/t/t",case4)
-    del case4
-    event,context=testcase_gen(method="GET_HISTORY",pk="1234",input=None)
-    case2=lambda_handler(event, context)
-    print("GET_HISTORY:/t/t/t/t/t",case2)
-    event,context=testcase_gen(method="UPDATE_ITEM",pk="1234",input=input, user="user01")
-    case4=lambda_handler(event, context)
-    print("UPDATE_ITEM:/t/t/t/t/t",case4)
-    event,context=testcase_gen(method="GET_HISTORY",pk="1234",input=None)
-    case2=lambda_handler(event, context)
-    print("GET_HISTORY:/t/t/t/t/t",case2)
-    event,context=testcase_gen(method="DROP_HISTORY",pk="1234",input=input, user="user01")
-    case4=lambda_handler(event, context)
-    print("DROP_HISTORY:/t/t/t/t/t",case4)
-    del case4
     
     
     

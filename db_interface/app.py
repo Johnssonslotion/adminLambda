@@ -1,8 +1,13 @@
 import os
 import sys
 sys.path.append(os.getcwd())
-
 import logging
+
+logger = logging.getLogger("INTERFACE-LAMBDA")
+logger.info("DETAILS - START")
+logger.setLevel(logging.INFO)
+
+
 import json
 
 
@@ -54,7 +59,7 @@ def POST(event,conn):
     - QUARY_STRING
     '''
     
-    payload,info,err=utils.base64_body_parser(event) ## base64로 parser 
+    payload,err=utils.base64_body_parser(event) ## base64로 parser 
     if err is not None:
         return respond(err,step="PARSING STEP")
     else:
@@ -67,7 +72,7 @@ def POST(event,conn):
                         lng= float(payload["lng"])
                         radius = int(payload["radius"])
                     except:
-                        err=utils.err_(f"{info}: Lat, Lng type error")
+                        err=utils.err_(f" Lat, Lng type error")
                         return respond(err=err)
                     
                     if lat < 0 or lat > 90:
@@ -90,7 +95,7 @@ def POST(event,conn):
             logging.info(f"Normal single search")
             query_results,err=conn.query_single_PK(payload["PK"])
             if err is None:
-                logging.info(f"Normal process in CALL_PK : ID:{info}")
+                logging.info(f"Normal process in CALL_PK ")
                 return respond(err,res=query_results,step='CALL_PK');
             else:
                 return respond(err,step='CALL_PK')
@@ -100,7 +105,7 @@ def POST(event,conn):
                 #TODO TEST CASE and FUNCTION
                 Input= payload["Input"]
                 if 'PK' in Input.keys():    
-                    logging.info(f"Normal process in UPDATE_INFO : ID:{info}")
+                    logging.info(f"Normal process in UPDATE_INFO ")
                     query_results,err=conn.update_information(Input,Table='TEST_CASE_0_build_info')
                     if err is None:
                         return respond(err,res=query_results,step='UPDATE_INFO');
