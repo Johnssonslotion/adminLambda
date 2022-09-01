@@ -15,7 +15,6 @@ Globals:
           DEVENV : "OSX"
           REGION : "ap-northeast-2" 
           TABLE :  "TEST_CASE_0_build_info"
-
 Resources:
   DBInterFaceApi:
     Type: AWS::Serverless::HttpApi
@@ -29,6 +28,18 @@ Resources:
       Tags:
         Tag: "Map default config with route settings"
   ### API Health check 를 위한 Lambda function
+  DBImageApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: db_image/
+      Handler: app.lambda_handler
+      Events:
+        Api:
+          Type: HttpApi # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Method: POST 
+            Path: /details/images
+            ApiId: !Ref DBInterFaceApi
   CheckApi:
     Type: AWS::Serverless::Function
     Properties:

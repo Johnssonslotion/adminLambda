@@ -34,10 +34,10 @@ def respond(err, res=None, step=None): ### error
     
     return {
         'statusCode': '400' if err else '200',
-        'body': {
+        'body': json.dumps( {
             "items":'[]',
-            "meta" :json.dumps(meta)
-            } if err else json.dumps(res,ensure_ascii=False),
+            "meta" :meta
+            },ensure_ascii=False) if err else json.dumps(res,ensure_ascii=False),
         'headers': {
             'Content-Type': 'application/json',
         },
