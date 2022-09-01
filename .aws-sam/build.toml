@@ -28,6 +28,15 @@ manifest_hash = ""
 packagetype = "Zip"
 functions = ["GetDetails"]
 
+[function_build_definitions.03df3b55-2c01-4506-b981-2492d3fab4a8]
+codeuri = "/Users/john/work/project/aws/toiletdb/db_image"
+runtime = "python3.9"
+architecture = "x86_64"
+handler = "app.lambda_handler"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["DBImageApi"]
+
 [layer_build_definitions]
 [layer_build_definitions.d78162ba-51e7-48c8-9193-466f697d0729]
 layer_name = "CommonSrc"
