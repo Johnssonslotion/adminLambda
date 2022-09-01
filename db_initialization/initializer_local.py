@@ -103,10 +103,19 @@ def INPUT_DB(confirmed_df,conn,DBSET):
 ########## 람다 이식시 Handler 로 변경 필요 -> 
 # def lambda_handler(event, context):
 if __name__=='__main__':
-      
     from dotenv import load_dotenv
     load_dotenv(verbose=True)
     
+    #date_log=time.strftime('%Y-%m-%d', time.localtime(time.time()))
+    logging.basicConfig(
+      filename=os.path.join(os.getcwd(),'log/logfile.log'),
+      filemode="w",
+      format="[%(asctime)s] %(message)s",
+      )
+    logger = logging.getLogger()
+    logger.addHandler(logging.StreamHandler())
+    logger.setLevel(logging.INFO)
+
     url_target_1 = 'http://apis.data.go.kr/1613000/BldRgstService_v2/getBrBasisOulnInfo'
     url_target_2 = 'http://apis.data.go.kr/1613000/BldRgstService_v2/getBrTitleInfo'
     
@@ -140,21 +149,10 @@ if __name__=='__main__':
     
     conn=dynamo.dynamoApi(aws_env,dev_env,region,table_name,cli=cli)
 
-
-    geoDataManager_case_00   = conn.geodynamodb('_build_info',HASHKEY=7,Create_table=None)
-    geoDataManager_case_01   = conn.geodynamodb('_build_info_review_nobldnm',HASHKEY=7,Create_table=None)
-    geoDataManager_case_02   = conn.geodynamodb('_build_info_review_noNewAddr',HASHKEY=7,Create_table=None)
-    # geoDataManager_case_10   = conn.geodynamodb('TEST_CASE_1_build_info',7)
-    # geoDataManager_case_11   = conn.geodynamodb('TEST_CASE_1_build_info_review_nobldnm',7)
-    # geoDataManager_case_12   = conn.geodynamodb('TEST_CASE_1_build_info_review_noNewAddr',7)
-    # geoDataManager_case_20   = conn.geodynamodb('TEST_CASE_2_build_info',9)
-    # geoDataManager_case_21   = conn.geodynamodb('TEST_CASE_2_build_info_review_nobldnm',9)
-    # geoDataManager_case_22   = conn.geodynamodb('TEST_CASE_2_build_info_review_noNewAddr',9)
-    # conn.abnormal_table_init('_build_info_review_address_failure')
-    # conn.abnormal_table_init('TEST_CASE_1_build_info_review_address_failure')
-    # conn.abnormal_table_init('TEST_CASE_2_build_info_review_address_failure')
-    
-    
+    geoDataManager_case_00   = conn.geodynamodb('_build_info',HASHKEY=7,Create_table=True)
+    geoDataManager_case_01   = conn.geodynamodb('_build_info_review_nobldnm',HASHKEY=7,Create_table=True)
+    geoDataManager_case_02   = conn.geodynamodb('_build_info_review_noNewAddr',HASHKEY=7,Create_table=True)
+    conn.abnormal_table_init('_build_info_review_address_failure')
     ###############################################################
     
     
@@ -200,12 +198,12 @@ if __name__=='__main__':
             continue
       # if index <= 4316: ## 세종시 시작
             # continue
-      if index <= 423 : 
+      if index <= 179 : 
             continue
       # if index == 4475: ## 경기도 시작 
       #       break
-    #   # if index == 5:
-    #   #   break;
+      #   # if index == 5:
+      #   #   break;
       #print(f"{index} : {i['Nm']} {i['exist']}")
       target_dict=apis.call_api(
         url_target_2,
@@ -216,12 +214,14 @@ if __name__=='__main__':
         num= 20000,
         )
       try:
-        print(f"index: {index}, {i['Nm']}, \t\t\t\t\t\t n of items:{target_dict['response']['body']['totalCount']} \t\t\t {i['exist']}")
+        logging.info(f"index: {index},[{i['sigunguCd']},{i['bjdongCd']}] {i['Nm']}, \t\t\t\t\t\t n of items:{target_dict['response']['body']['totalCount']} \t\t\t {i['exist']}")
+        print(f"index: {index}, {i['Nm']} [{i['sigunguCd']},{i['bjdongCd']}], \t\t\t\t\t\t n of items:{target_dict['response']['body']['totalCount']} \t\t\t {i['exist']}")
       except:
         if 'OpenAPI_ServiceResponse' in target_dict.keys():
           continue
         target_dict=target_dict[0]
-        print(f"index: {index}, {i['Nm']}, \t\t\t\t\t\t n of items:{target_dict['response']['body']['totalCount']} ")
+        logging.info(f"index: {index},[{i['sigunguCd']},{i['bjdongCd']}] {i['Nm']}, \t\t\t\t\t\t n of items:{target_dict['response']['body']['totalCount']} ")
+        print(f"index: {index},[{i['sigunguCd']},{i['bjdongCd']}] {i['Nm']}, \t\t\t\t\t\t n of items:{target_dict['response']['body']['totalCount']} ")
         
       if target_dict['response']['header']['resultCode']=='00':
         ### Normal State 

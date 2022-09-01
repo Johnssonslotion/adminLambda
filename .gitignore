@@ -8,7 +8,8 @@
 
 common_src/src/
 common_src/python/constant.py
-
+log
+nohup.out
 ### Linux ###
 *~
 

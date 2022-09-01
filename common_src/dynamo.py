@@ -340,9 +340,9 @@ class dynamoApi(object):
         if res_geo['crs'] is not None:
             item_dict['CRS']={'S':res_geo['crs']}
         if res_geo['lat'] is not None:
-            item_dict['lat']={'S':res_geo['lat']}
+            item_dict['lat_origin']={'S':res_geo['lat']}
         if res_geo['lng'] is not None:
-            item_dict['lng']={'S':res_geo['lng']}
+            item_dict['lng_origin']={'S':res_geo['lng']}
         
         PutItemInput = {
                 'Item':item_dict,
@@ -374,8 +374,6 @@ class dynamoApi(object):
         }
 
         return result
-
-
         
     def abnormal_table_init(self,target):
         if target in self.client.list_tables()['TableNames']:
