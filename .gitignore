@@ -8,6 +8,8 @@
 
 common_src/src/
 common_src/python/constant.py
+aws-sam/
+test_image
 
 ### Linux ###
 *~
@@ -253,6 +255,7 @@ $RECYCLE.BIN/
 # End of https://www.gitignore.io/api/osx,linux,python,windows,pycharm,visualstudiocode
 .aws-sam/build.toml
 samconfig.toml
+.aws-sam/build.toml
 .aws-sam/build.toml
 .aws-sam/build.toml
 .aws-sam/build.toml
