@@ -25,7 +25,7 @@ from dynamodbgeo.s2 import S2Manager
 try:
     from src import constant
     import apis,utils
-    
+
 except:
     from common_src.src import constant
     from common_src import apis,utils ### local condition
@@ -1004,97 +1004,11 @@ if __name__ =="__main__":
     
     
     
-    # def temp(PK):
-    item=conn.client.get_item(TableName="_test_db",Key={'hashKey':{'N':"38536"},'rangeKey':{'S':"361101000028326"}},) ### get_item은 스키마를 따라가며, decribe_table로 확인할수 있음 sort까지 동시에 필요
-    ## 호출 실패 케이스
-    #hashKey N rangeKey S
-    
-    if item['ResponseMetadata']['HTTPStatusCode'] == 200:
-        err=utils.err_("PK")
-        # return None, err
-
-    # 2분마다 한번씩 입력가능
-    try:
-        Enrolled_date=float(item['Item']['TIMESTAMP']['N']) ## timestamp
-        delta= time.time()-Enrolled_date
-        delta_sec=int(delta)
-    except:
-        delta=60 ## 입력안된 케이스 확인
-        
-
-    # if delta < 60: ## 60초 미만일때,
-    #     err=utils.err_("value")
-        
-    ### change owner
-    #### 입력 받을 구조 
-    
-    
-    
-    
-    default_cord={
-        'lat':36.4977,
-        'lng':127.2067,
-        'radius':1000 
-    }
     
     
     
     
     
-    
-    
-    
-    
-    # TIMESTAMP=time.time()
-    # ### GEOHASH-GEN 
-    # nGenhash=S2Manager().generateGeohash(dynamodbgeo.GeoPoint(default_cord['lat'], default_cord['lng']))
-    # nGenjson=dynamodbgeo.GeoPoint(default_cord['lat'], default_cord['lng'])
-    
-    # item=conn.client.update_item(
-    #             TableName="test_db",
-    #             Key={
-    #                 'pk':{'S':'1235'},
-    #                 },
-    #             UpdateExpression="SET #H=:D",
-    #             ExpressionAttributeNames={"#H": "HISTORY"},
-    #             ExpressionAttributeValues={":D":{"L": []}}
-    #         )
-    
-    
-    
-    
-    ## https://stackoverflow.com/questions/57494372/storing-list-of-dict-in-a-dynamodb-table
-    
-    import json
-    temp={
-        "temp":"temp"
-    }
-    
-    
-    
-    
-    
-    
-    HashKey=target_HashKey
-    rangeKey=target_rangeKey
-    
-    
-    item=conn.client.update_item(
-            TableName="test_db",
-            Key={
-                'hashKey':{'N':HashKey},
-                'rangeKey':{'N':rangeKey}
-                },
-            UpdateExpression="SET #H=list_append(#H,:D)", #'SET #Y = :y, #AT = :t, #TIME= :tt',
-            #UpdateExpression="SET #H=:D", #'SET #Y = :y, #AT = :t, #TIME= :tt',
-            ExpressionAttributeNames={"#H": "HISTORY"},
-            ExpressionAttributeValues={":D":{"L": [{"S":"a"}]}}
-        )
-        
-  
-     
-    print(e)
-    a=conn.client.scan(TableName="test_db")
 
 # T=conn.resource.Table("test_db")
 

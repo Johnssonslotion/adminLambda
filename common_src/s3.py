@@ -1,14 +1,27 @@
+import json
 import os
 import boto3
 import logging
 
-class s3(object):
+from PIL import Image
+from io import BytesIO
+import base64
+
+
+
+# ###
+# import multipart
+# from multipart.multipart import parse_options_header
+# ###
+
+
+class s3Api(object):
     '''
     s3를 통해서, 폴더명은 
     입력값 받아서 72p의 thumb생성,
     그 후
-    - image/$PK/thumbnail/image_$index.$ext 
-    - image/$PK/normal/image_$index.$ext
+    - image/$PK/thumbnail/$uuid.png 
+    - image/$PK/normal/$uuid.png
     
     1. 확장자 parsing
     2. 
@@ -19,23 +32,26 @@ class s3(object):
         self.cli=boto3.client('s3')
         self.rsc=boto3.resource('s3')
         
-    def upload_image(self,local_file, s3_file):
+    def upload_image(self,local_file,s3_file):
         '''
         내부 함수 사용안함
-        
         '''
         logging.info(f"upload_to_aws : {local_file},{s3_file}")
         err=None
         try:
-            self.cli.upload_file(local_file, os.environ['BUCKET_NAME'], s3_file)
+            self.cli.upload_file(
+                local_file,
+                os.environ['BUCKET_NAME'], 
+                s3_file
+                )
             return s3_file, err
         except FileNotFoundError as e:
             logging.error("The file was not found")
-            err=e.message
+            err=e
             return None,err 
         except Exception as e:
             logging.error(f"error : {e}")
-            err=e.message
+            err=e
             return None,err
         
     def generate_url(self,s3_file,method='get'):
@@ -45,27 +61,30 @@ class s3(object):
         '''
         logging.info(f"generating url from file :{s3_file}")
         url = self.cli.generate_presigned_url(
-                ClientMethod='get_object' if method == 'get' else 'put_object',
+                ClientMethod='get_object',
                 Params={
                     'Bucket': os.environ['BUCKET_NAME'],
                     'Key': s3_file
                 },
-                ExpiresIn=12 * 3600
+                ExpiresIn=3600
             )
         logging.info(f"Upload Successful : {url}")
         return url
         
         
-    def get_list_bucket(self,PK):
-        res=self.cli.list_objects(Bucket=os.environ['BUCKET_NAME'],Prefix=f"{PK}/main/")
+    def get_list_bucket(self,path):
+        res=self.cli.list_objects(Bucket=os.environ['BUCKET_NAME'],Prefix=path)
         if res["ResponseMetadata"]['HTTPStatusCode']==200:
             logging.info("Normal process : list_bucket")
             if "Contents" in res.keys():
                 logging.info(f'return items:{len(res["Contents"])}')
                 index=len(res["Contents"])
+                items=res["Contents"]
+                #logging.info(f"list bucke itemsßßß:{items}")
             else:
-                index=1
-        return 
+                index=0
+                items=[]
+        return index,items
         
 if __name__=="__main__":
     from dotenv import load_dotenv
@@ -75,9 +94,5 @@ if __name__=="__main__":
     logging.basicConfig(format='[%(asctime)s] %(message)s')
     logger.setLevel(logging.INFO)
     logging.info("s3 unit test")
-    conn=s3()
-    res=conn.upload_to_aws("./test_image")
-    
-    ### s3 naming rule
-    
+    conn=s3Api()
     
