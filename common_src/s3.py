@@ -73,6 +73,10 @@ class s3Api(object):
         
         
     def get_list_bucket(self,path):
+        '''
+        input 경로
+        output Key값을 포함한 기타정보
+        '''
         res=self.cli.list_objects(Bucket=os.environ['BUCKET_NAME'],Prefix=path)
         if res["ResponseMetadata"]['HTTPStatusCode']==200:
             logging.info("Normal process : list_bucket")
@@ -85,6 +89,54 @@ class s3Api(object):
                 index=0
                 items=[]
         return index,items
+    def del_list_bucket(self,indexes):
+        '''
+        indexes should be checked
+        '''
+        err=None
+        
+        if len(indexes)==1:
+            res=self.cli.delete_object(
+                Bucket= os.environ['BUCKET_NAME'],
+                Key=indexes[0]
+            )
+            if res['ResponseMetadata']['HTTPStatusCode']!=200:
+                result=None 
+                err="abnormal connection"
+            elif "Deleted" in res.keys():
+                result=None
+                err="not deleted"
+            else:
+                result=res['Deleted']
+                err=None
+            return result, err
+            
+        elif len(indexes)>=1:
+            Keys=[]
+            for i in indexes:
+                Keys.append({'Keys':i})
+            res=self.cli.delete_objects(
+                Bucket=os.environ['BUCKET_NAME'],
+                Delete={'Object':Keys}
+            )
+            if res['ResponseMetadata']['HTTPStatusCode']!=200:
+                result=None 
+                err="abnormal connection"
+            elif "Deleted" in res.keys():
+                result=None
+                err="not deleted"
+            else:
+                result=res['Deleted']
+                err=None
+            return result, err
+        else:
+            ''' None items'''
+            result =None
+            err= "No validated request"
+            return result, err
+            
+
+        
         
 if __name__=="__main__":
     from dotenv import load_dotenv
