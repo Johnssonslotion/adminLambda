@@ -154,7 +154,7 @@ def upload_images(conn_s3,payload):
             
             logging.info(f"items:{items}")
         
-        
+        current_items=[]
         logging.info("check infomation")
         index,get_items=conn_s3.get_list_bucket(f"image/{PK}")
         #logging.info(f"get_items:{get_items}")
@@ -164,22 +164,84 @@ def upload_images(conn_s3,payload):
             return respond(err)
         else:
             for i in get_items:
-                logging.info(f"try get url {i}")
+                #logging.info(f"try get url {i}")
+                current_items.append(i['Key'])
                 urls.append(conn_s3.generate_url(i['Key']))
         
         logging.info(f'final check:{err}')
         results= {
             "PK":payload['PK'],
-            "uploaded_item":items,
+            "uploaded_items":items,
+            "items":current_items,
             "urls":urls,
         }
         
         return respond(err,res=results,step="upload_images") 
             
 
+def del_image(conn_s3,payload):
+    ### return items
+    normal_items=[]
+    thumbs_items=[]
+    ### return urls
+    normal_urls=[]
+    thumbs_urls=[]
+    err=None
+    index=payload["index"]
     
+    ### validated index
+    val_index=[]
+    ### target keys
+    target_items=[]
     
+    PK=payload["PK"]
+    ###items call 
+    get_index,get_items=conn_s3.get_list_bucket(f"image/{PK}/normal")
+    for i in index:
+        try:
+            if i < get_index:
+                val_index.append(int(i)) ### 상수일때만 추가
+            else:
+                logging.error(f"{i} is not included in contents")
+        except:
+                logging.error(f"{i} is not included in contents")    
+        
     
+    #### after cheking indexes, 
+    if len(val_index)==0:
+        logging.error("No valided items")
+        err=utils.err_("invalided items")
+        return respond(err, step="del image")
+    
+    else:
+        logging.info("Start delete step")
+        for i in val_index:
+            target_items.append(get_items[i]['Keys'])
+        deleted=conn_s3.del_list_bucket(target_items)    
+        get_items=conn_s3.get_list_bucket(f"image/{PK}/normal")
+        get_thumbs=conn_s3.get_list_bucket(f"image/{PK}/thumbnail")
+        if len(get_items)==0:
+            logging.info("No items")
+        else:
+            for i in get_items:
+                logging.info("Start : generating normal urls")
+                normal_items.append(i['Key'])
+                normal_urls.append(conn_s3.generate_url(i['Key']))
+            for i in get_thumbs:
+                logging.info("Start : generating thumbs urls")
+                thumbs_items.append(i['Key'])
+                thumbs_urls.append(conn_s3.generate_url(i['Key']))
+        results= {
+                "PK":payload['PK'],
+                "delected_indexes":val_index,
+                "delected_items":deleted,
+                "normal_items":normal_items,
+                "normal_urls": normal_urls,
+                "thumb_items": thumbs_items,
+                "thumb_urls":  thumbs_urls,
+            }
+            
+        return respond(err,res=results,step="del_image") 
     
     
     
@@ -203,7 +265,7 @@ def common_action(conn_s3,payload):
         Thumbnail 획득
         '''
         logging.info("get_thumbs start")
-        #return get_thumbs(conn_s3,payload)
+        return get_thumbs(conn_s3,payload)
     elif method == "CLEAR_IMAGES":
         '''
         이력 전체삭제
@@ -218,7 +280,7 @@ def common_action(conn_s3,payload):
         
         '''
         logging.info("del_images start")
-        #return del_image(conn_s3,payload)
+        return del_image(conn_s3,payload)
     elif method == "UPLOAD_IMAGES":
         '''
         이력 단일삭제
@@ -227,13 +289,14 @@ def common_action(conn_s3,payload):
         logging.info("upload_images start")
         return upload_images(conn_s3,payload)
     else:
-        err=utils.err_("No method")
+        err=utils.err_("No method :")
         return respond(err)
 
 
 
 
 def lambda_handler(event,context):
+    os.system('rm -rf /tmp/image*')
     logging.basicConfig(format='[%(asctime)s] %(message)s')
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
