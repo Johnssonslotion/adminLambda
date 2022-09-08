@@ -2,7 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   toiletdb interface with dbstore and management
-
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
@@ -15,6 +14,7 @@ Globals:
           DEVENV : "OSX"
           REGION : "ap-northeast-2" 
           TABLE :  "TEST_CASE_0_build_info"
+          BUCKET_NAME :  "toiletphoto"
 Resources:
   DBInterFaceApi:
     Type: AWS::Serverless::HttpApi
@@ -28,11 +28,19 @@ Resources:
       Tags:
         Tag: "Map default config with route settings"
   ### API Health check 를 위한 Lambda function
-  DBImageApi:
+  GetImages:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: db_image/
       Handler: app.lambda_handler
+      Timeout: 180
+      Policies: 
+        - AmazonDynamoDBFullAccess
+        - S3CrudPolicy:
+            BucketName: "*"
+      CodeUri: db_image/
+      Layers:
+        - !Ref CommonSrc
+        - !Ref CommonLayer
       Events:
         Api:
           Type: HttpApi # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
@@ -52,6 +60,15 @@ Resources:
             Method: get
             Path: /
             ApiId: !Ref DBInterFaceApi
+  CommonLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LicenseInfo: "common_layer_v0"
+      ContentUri: common_layer/
+      CompatibleRuntimes:
+        - python3.9
+    Metadata:
+      BuildMethod: python3.9
   CommonSrc:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -71,11 +88,7 @@ Resources:
       Policies: AmazonDynamoDBFullAccess
       Layers:
         - !Ref CommonSrc
-        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:dynamodb-geo:3
-        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:requests:4
-        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:pandas:1
-        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:xmltodict:2
-      
+        - !Ref CommonLayer
       Architectures:
         - x86_64
       Events:
@@ -96,10 +109,7 @@ Resources:
       Policies: AmazonDynamoDBFullAccess
       Layers:
         - !Ref CommonSrc
-        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:dynamodb-geo:3
-        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:requests:4
-        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:pandas:1
-        - !Sub arn:aws:lambda:ap-northeast-2:499644552089:layer:xmltodict:2
+        - !Ref CommonLayer
       Architectures:
         - x86_64
       Events:

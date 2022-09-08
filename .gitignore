@@ -10,6 +10,7 @@ common_src/src/
 common_src/python/constant.py
 aws-sam/
 test_image
+controller/
 
 ### Linux ###
 *~
