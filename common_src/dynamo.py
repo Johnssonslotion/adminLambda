@@ -609,11 +609,11 @@ class dynamoApi(object):
         
         for i in placeholder.keys():
             if constant.type_check[i]==int:
-                placeholder[i] = {'N':Update[i]}
+                placeholder[i] = {'N': str(Update[i])}
             elif constant.type_check[i]==bool:
-                placeholder[i] = {'BOOL':Update[i]}
+                placeholder[i] = {'BOOL': Update[i]}
             else: ## str
-                placeholder[i] = {'S':Update[i]}
+                placeholder[i] = {'S': str(Update[i])}
         
         placeholder['index']        =  {"N":index}
         placeholder['uuid']         =  {"B":update_UUID}
@@ -906,6 +906,8 @@ class dynamoApi(object):
             Exp_string="REMOVE"
             
             target_column=list(constant.type_check.keys())
+            
+                        
             try: 
                 target_column.remove('lat') ##DB이전 후 아래로 옮기자
             except:
@@ -955,7 +957,39 @@ class dynamoApi(object):
                     UpdateExpression=Exp_string,
                     ReturnValues='UPDATED_NEW',
                 )
-            logging.info(f"R:{updated_res}")                
+            logging.info(f"R:{updated_res}")
+            
+            ######## geoJson & geohash update
+            
+                             
+            if "lat" in res["Items"][0].keys():
+                lat=float(res["Items"][0]["lat"]["S"])
+                lng=float(res["Items"][0]["lng"]["S"])
+                geohash={"N":S2Manager().generateGeohash(dynamodbgeo.GeoPoint(lat,lng))}
+                geojson={"S":f"{lat},{lng}"}
+                
+            else:
+                lat=float(res["Items"][0]["lat_orgin"]["S"])
+                lng=float(res["Items"][0]["lat_orgin"]["S"])
+                geohash={"N":S2Manager().generateGeohash(dynamodbgeo.GeoPoint(lat,lng))}
+                geojson={"S":f"{lat},{lng}"}
+            
+            updated_res=self.client.update_item(
+                    TableName=TableName,
+                    Key=Key,
+                    UpdateExpression="SET #H1=:S1, #H2=:S2",
+                    ExpressionAttributeNames={
+                        "#H1": "geojson",
+                        "#H2": "geohash",
+                        },
+                    ExpressionAttributeValues={
+                        ":S1": geojson,
+                        ":S2": geohash,
+                        },
+                    ReturnValues='UPDATED_NEW',
+                )
+            logging.info(f"R:{updated_res}")
+                         
         
         if updated_res['ResponseMetadata']["HTTPStatusCode"]==200:
             if "Attributes" in updated_res.keys():
