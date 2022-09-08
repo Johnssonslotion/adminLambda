@@ -14,10 +14,12 @@ import json
 from decimal import Decimal
 import time
 
-try:
-    import dynamo,apis,utils ### in layer 
-except:
-    from common_src import dynamo,apis,utils ### in local python code
+import dynamo,apis,utils ### in layer ~
+
+# try:
+#     import dynamo,apis,utils ### in layer 
+# except:
+#     from common_src import dynamo,apis,utils ### in local python code
 
 
 def respond(err, res=None, step=None): ### error 
@@ -34,10 +36,10 @@ def respond(err, res=None, step=None): ### error
     
     return {
         'statusCode': '400' if err else '200',
-        'body': {
+        'body': json.dumps( {
             "items":'[]',
-            "meta" :json.dumps(meta)
-            } if err else json.dumps(res,ensure_ascii=False),
+            "meta" :meta
+            },ensure_ascii=False) if err else json.dumps(res,ensure_ascii=False),
         'headers': {
             'Content-Type': 'application/json',
         },

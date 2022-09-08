@@ -13,11 +13,9 @@ import json
 from decimal import Decimal
 import time
 
-try:
-    import dynamo,apis,utils ### in layer 
-except:
-    from common_src import dynamo,apis,utils ### in local python code
 
+import dynamo,apis,utils ### in layer 
+# s
 
 def respond(err, res=None, step=None): ### error 
     ### boto3 code convention와 양식을 일치시키기 위해서
@@ -34,10 +32,10 @@ def respond(err, res=None, step=None): ### error
         res["meta"]=meta
     return {
         'statusCode': '400' if err else '200',
-        'body': {
+        'body': json.dumps({
             "items":'[]',
-            "meta" :json.dumps(meta)
-            } if err else json.dumps(res,ensure_ascii=False),
+            "meta" :meta,
+            },ensure_ascii=False) if err else json.dumps(res,ensure_ascii=False),
         'headers': {
             'Content-Type': 'application/json',
         },
@@ -83,6 +81,12 @@ def common_action(conn,payload,debug=None):
         UPDATE_ITEM -> APPI_HISTORY를 통해서 적용
         '''
         return update_item(conn,payload,debug=None);
+    elif method == "CLEAR_INFO":
+        '''
+        히스토리 업데이트 및 미반영
+        UPDATE_ITEM -> APPI_HISTORY를 통해서 적용
+        '''
+        return clear_info(conn,payload,debug=None);
     else:
         err=utils.err_("No method")
         return respond(err)
@@ -221,6 +225,7 @@ def update_item(conn,payload,debug=None):
 
 def apply_history(conn,payload,debug=None):
     logging.info("start update_item")
+    err=None
     if 'test' in payload.keys():
         TableName="_test_db"
         payload["PK"]="361101000028326"
@@ -235,7 +240,31 @@ def apply_history(conn,payload,debug=None):
         logging.info(f"Normal process in APPLY_HISTORY : {result}")
         return respond(err,res=result,step='APPLY_HISTORY');
     else:
-        return respond(err,step='APPLY_HISTORY')            
+        return respond(err,step='APPLY_HISTORY')
+    
+            
+def clear_info(conn,payload,debug=None):
+    logging.info("start clear_info")
+    err=None
+    if 'test' in payload.keys():
+        TableName="_test_db"
+        payload["PK"]="361101000028326"
+        payload["user"]="user00"
+    else:
+        TableName=None
+    if "user" not in payload.keys():
+        err=utils.err_("No user")
+        return respond(err,step='CLEAR_HISTORY');
+    elif "PK" not in payload.keys():
+        err=utils.err_("No PK")
+        return respond(err,step='CLEAR_HISTORY');
+    else:
+        result,err=conn.clear_info(payload["PK"],payload["user"],TableName=TableName)
+    if err == None:
+        logging.info(f"Normal process in CLEAR_HISTORY : {result}")
+        return respond(err,res=result,step='CLEAR_HISTORY');
+    else:
+        return respond(err,step='CLEAR_HISTORY')            
 
 def delete_history(conn,payload,debug=None):
     return 0;
