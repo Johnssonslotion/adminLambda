@@ -965,13 +965,13 @@ class dynamoApi(object):
             if "lat" in res["Items"][0].keys():
                 lat=float(res["Items"][0]["lat"]["S"])
                 lng=float(res["Items"][0]["lng"]["S"])
-                geohash={"N":S2Manager().generateGeohash(dynamodbgeo.GeoPoint(lat,lng))}
+                geohash={"N":f"{S2Manager().generateGeohash(dynamodbgeo.GeoPoint(lat,lng))}"}
                 geojson={"S":f"{lat},{lng}"}
                 
             else:
                 lat=float(res["Items"][0]["lat_orgin"]["S"])
                 lng=float(res["Items"][0]["lat_orgin"]["S"])
-                geohash={"N":S2Manager().generateGeohash(dynamodbgeo.GeoPoint(lat,lng))}
+                geohash={"N":f"{S2Manager().generateGeohash(dynamodbgeo.GeoPoint(lat,lng))}"}
                 geojson={"S":f"{lat},{lng}"}
             
             updated_res=self.client.update_item(
@@ -994,7 +994,8 @@ class dynamoApi(object):
         if updated_res['ResponseMetadata']["HTTPStatusCode"]==200:
             if "Attributes" in updated_res.keys():
                 updated_item=updated_res["Attributes"]
-                updated_item.pop('Duuid')
+                if 'Duuid' in updated_item.keys():
+                    updated_item.pop('Duuid')
                 logging.info(f"Attr:{updated_item}")
             else:
                 updated_item=None
