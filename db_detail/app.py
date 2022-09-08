@@ -13,11 +13,9 @@ import json
 from decimal import Decimal
 import time
 
-try:
-    import dynamo,apis,utils ### in layer 
-except:
-    from common_src import dynamo,apis,utils ### in local python code
 
+import dynamo,apis,utils ### in layer 
+# s
 
 def respond(err, res=None, step=None): ### error 
     ### boto3 code convention와 양식을 일치시키기 위해서

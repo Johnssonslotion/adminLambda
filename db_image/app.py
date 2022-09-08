@@ -66,7 +66,7 @@ def get_thumbs(conn_s3,payload):
     urls=[]
     err=None
     PK=payload['PK']
-    index,get_items=conn_s3.get_list_bucket(f"image/{PK}/thumbs")
+    index,get_items=conn_s3.get_list_bucket(f"image/{PK}/thumbnail")
     #logging.info(f"get_items:{get_items}")
     if index==0:
         logging.error("error image get")
@@ -81,7 +81,7 @@ def get_thumbs(conn_s3,payload):
     logging.info(f'final check:{err}')
     results= {
         "PK":payload['PK'],
-        "item":get_items,
+        "item":items,
         "urls":urls,
     }
     
@@ -187,7 +187,16 @@ def del_image(conn_s3,payload):
     normal_urls=[]
     thumbs_urls=[]
     err=None
-    index=payload["index"]
+    if "NUM" not in payload.keys():
+        err=utils.err_("No Num for select item")
+        return respond(err,step="del_image") 
+    else:
+        try:
+            index=int(payload["NUM"])
+            logging.info(f"NUM is int")
+        except: 
+            index=list(payload["NUM"])
+            logging.info(f"NUM is list")
     
     ### validated index
     val_index=[]
@@ -197,15 +206,20 @@ def del_image(conn_s3,payload):
     PK=payload["PK"]
     ###items call 
     get_index,get_items=conn_s3.get_list_bucket(f"image/{PK}/normal")
-    for i in index:
-        try:
-            if i < get_index:
+    _,get_thumbs=conn_s3.get_list_bucket(f"image/{PK}/thumbnail")
+    logging.info(f"num : {get_index}, items: {get_items}, {get_thumbs}")
+    if type(index) == int:
+        i=index
+        if i < get_index:
+            val_index.append(int(i)) ### 상수일때만 추가
+        else:
+            logging.error(f"{i} is not included in contents")
+    elif type(index) == list:
+        for i in index:
+            if int(i) < get_index:
                 val_index.append(int(i)) ### 상수일때만 추가
             else:
-                logging.error(f"{i} is not included in contents")
-        except:
-                logging.error(f"{i} is not included in contents")    
-        
+                logging.error(f"{i} is not included in contents")        
     
     #### after cheking indexes, 
     if len(val_index)==0:
@@ -216,15 +230,17 @@ def del_image(conn_s3,payload):
     else:
         logging.info("Start delete step")
         for i in val_index:
-            target_items.append(get_items[i]['Keys'])
-        deleted=conn_s3.del_list_bucket(target_items)    
-        get_items=conn_s3.get_list_bucket(f"image/{PK}/normal")
-        get_thumbs=conn_s3.get_list_bucket(f"image/{PK}/thumbnail")
+            target_items.append(get_items[i]['Key'])
+            target_items.append(get_thumbs[i]['Key'])
+        deleted=conn_s3.del_list_bucket(target_items)
+        _,get_items=conn_s3.get_list_bucket(f"image/{PK}/normal")
+        _,get_thumbs=conn_s3.get_list_bucket(f"image/{PK}/thumbnail")
+        logging.info(f"target_items:{get_items},{get_thumbs}") 
         if len(get_items)==0:
             logging.info("No items")
         else:
             for i in get_items:
-                logging.info("Start : generating normal urls")
+                logging.info("Start : generating normal urls for normal")
                 normal_items.append(i['Key'])
                 normal_urls.append(conn_s3.generate_url(i['Key']))
             for i in get_thumbs:
@@ -234,7 +250,7 @@ def del_image(conn_s3,payload):
         results= {
                 "PK":payload['PK'],
                 "delected_indexes":val_index,
-                "delected_items":deleted,
+                "delected_items":target_items,
                 "normal_items":normal_items,
                 "normal_urls": normal_urls,
                 "thumb_items": thumbs_items,
@@ -242,6 +258,30 @@ def del_image(conn_s3,payload):
             }
             
         return respond(err,res=results,step="del_image") 
+def clear_images(conn_s3,payload):
+    ### return items
+    normal_items=[]
+    thumbs_items=[]
+    ### return urls
+    normal_urls=[]
+    thumbs_urls=[]
+    err=None
+       
+    ### target keys
+    target_items=[]
+    PK=payload["PK"]
+    ###items call 
+    get_index,get_items=conn_s3.get_list_bucket(f"image/{PK}")
+    deleted_item=[]
+    for i in get_items:
+        deleted_item.append(i['Key'])
+    logging.info(f"detected item : {deleted_item}")
+    result,_=conn_s3.del_list_bucket(deleted_item)
+    results= {
+                "PK":payload['PK'],
+                "delected_items":deleted_item,
+            }        
+    return respond(err,res=results,step="del_image") 
     
     
     
@@ -272,7 +312,7 @@ def common_action(conn_s3,payload):
         필수 method / PK / 
         '''
         logging.info("clear_images start")
-        #return clear_images(conn_s3,payload)
+        return clear_images(conn_s3,payload)
     elif method == "DEL_IMAGE":
         '''
         이력 선택삭제
