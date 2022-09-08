@@ -128,6 +128,7 @@ class model_manage_toilet(object):
 if __name__=="__main__":
     logger=logging.getLogger()
     logging.basicConfig(level=logging.INFO)
+
     
     
     

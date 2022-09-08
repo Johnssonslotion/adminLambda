@@ -39,12 +39,28 @@ except:
 
 
 class dynamoApi(object):
-    def __init__(self, aws_env, dev_env, region_name,table_name, cli=None):
-        self._aws_env= aws_env
-        self._dev_env= dev_env
-        self._region_name=region_name
-        self._table_name=table_name
+    def __init__(self, aws_env=None, dev_env=None, region_name=None,table_name=None, cli=None):
         
+        if aws_env == None:
+            self._aws_env= os.environ['AWSENV']
+        else:    
+            self._aws_env= aws_env
+        
+        if dev_env== None:        
+            self._dev_env= os.environ['DEVENV']
+        else:
+            self._dev_env= dev_env
+            
+        if region_name==None:
+            self._region_name=os.environ['REGION']
+        else:
+            self._region_name=region_name
+        
+        if table_name==None:
+            self._table_name=os.environ['TABLE']
+        else: 
+            self._table_name=table_name
+            
         '''
         ### 목적 : 
         ### T equip CRUD 및 공공 api 검색
@@ -716,8 +732,8 @@ class dynamoApi(object):
             str_info=res['Items'][0]['HISTORY']['L'][NUM]['S']
             info=json.loads(str_info)
             
-            if "DUUID" in res["Items"][0].keys(): #중복 체크 일단 disable
-                if res["Items"][0]["DUUID"]["B"] == info["uuid"]["B"]:
+            if "Duuid" in res["Items"][0].keys(): #중복 체크 일단 disable
+                if res["Items"][0]["Duuid"]["B"] == info["uuid"]["B"]:
                     result={"status":"updated"}
                     return result,err
             
@@ -729,8 +745,21 @@ class dynamoApi(object):
             Values={}
             Exp_string="SET"
             
-            ### Null 을 제외한 값 업데이트 constant에 정의된 형태
-            for i in constant.update_column.values():
+            ### Null 을 제외한 값 업데이트 constant에 정의된 형태 => 수정
+            target_column=list(constant.type_check.keys())
+            #target_column=[f"D{i}" for i in target_column] 
+            target_column.append('uuid')
+            try: 
+                target_column.remove('lat') ##DB이전 후 아래로 옮기자
+            except:
+                target_column.remove('lat_orgin')
+            try: 
+                target_column.remove('lng')
+            except:
+                target_column.remove('lng_orgin')
+            logging.info(f"column add: {target_column}")
+            
+            for i in target_column:
                 if info[i]!=None:
                     if list(info[i].values())[0]!=None:
                         #### 왜 Type 이 지정된 None값이 들어가지? 버그 validation 항목 체크
@@ -876,8 +905,28 @@ class dynamoApi(object):
             exp_gen=0
             Exp_string="REMOVE"
             
+            target_column=list(constant.type_check.keys())
+            try: 
+                target_column.remove('lat') ##DB이전 후 아래로 옮기자
+            except:
+                target_column.remove('lat_orgin')
+            try: 
+                target_column.remove('lng')
+            except:
+                target_column.remove('lng_orgin')
+                
+            target_column.append('uuid')
+            target_column=[f"D{i}" for i in target_column] 
+            logging.info(f"column add: {target_column}")
+            
             ### Null 을 제외한 값 업데이트 constant에 정의된 형태
-            for i in constant.update_column.keys():
+            ###
+            target_column=list(constant.type_check.keys())
+            target_column=[f"D{i}" for i in target_column] 
+            target_column.append('Duuid')
+            logging.info(f"column add: {target_column}")
+                        
+            for i in target_column:
                 if i in res["Items"][0].keys():
                         #### 왜 Type 이 지정된 None값이 들어가지? 버그 validation 항목 체크
                     Exp_string=f"{Exp_string} {i},"
@@ -934,7 +983,60 @@ class dynamoApi(object):
     def delete_history(self,PK,Update,TableName=None):
         return 0
         
+    
+    
+    
         
+        
+    
+    def add_management(self,PK,issue,USER,TableName=None):
+        err=None
+        result=None
+        key=None
+        
+        if TableName==None:
+            TableName=self._table_name
+        res=self.client.query(
+                TableName=TableName,
+                IndexName='PK-index',   
+                Select='ALL_ATTRIBUTES',
+                KeyConditions = {'PK': {'AttributeValueList':[{'S':PK,},],'ComparisonOperator': 'EQ'}} 
+        )
+        if "ResponseMetadata" not in res.keys():
+            logging.error("None connection")
+            err="None connection"
+            return result,err
+        elif res["ResponseMetadata"]["HTTPStatusCode"]!=200:
+            logging.error("HTTPCode connection error")
+            err="HTTPCode connection error"
+            return result,err
+        elif "Items" in res.keys():
+            Key={
+                'hashKey':res["Items"][0]["hashKey"],
+                'rangeKey':res["Items"][0]["rangeKey"],
+            }
+            ########
+            
+            Exp_string=""
+            Names=""
+            Values=""
+            
+            
+            updated_res=self.client.update_item(
+                    TableName=TableName,
+                    Key=Key,
+                    UpdateExpression=Exp_string,
+                    ExpressionAttributeNames=Names,
+                    ExpressionAttributeValues=Values,
+                    ReturnValues='UPDATED_NEW',
+                )
+            logging.info(f"R:{updated_res}")                
+            
+                
+                
+                    
+        
+    
     
     
     def string_query(string):
