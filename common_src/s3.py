@@ -101,7 +101,7 @@ class s3Api(object):
                 Key=indexes[0]
             )
             if res['ResponseMetadata']['HTTPStatusCode']!=200:
-                result=None 
+                result=None
                 err="abnormal connection"
             elif "Deleted" in res.keys():
                 result=None
@@ -114,10 +114,11 @@ class s3Api(object):
         elif len(indexes)>=1:
             Keys=[]
             for i in indexes:
-                Keys.append({'Keys':i})
+                Keys.append({'Key':i})
+            logging.info(f"target string:{Keys}")
             res=self.cli.delete_objects(
                 Bucket=os.environ['BUCKET_NAME'],
-                Delete={'Object':Keys}
+                Delete={'Objects':Keys}
             )
             if res['ResponseMetadata']['HTTPStatusCode']!=200:
                 result=None 
